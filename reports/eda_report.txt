@@ -1,0 +1,130 @@
+################################################################################ 
+# EComReviews-BD
+################################################################################
+
+sheet             rows  aspects
+PowerBank          692  12: Quality, Capacity, Charging, Cable, Indicator, Heat, Design, Packaging, Delivery, Seller, Price, Authenticity
+CellPhone          967  12: Quality, Battery, Charger, Audio, Display, Features, Network, Packaging, Delivery, Seller, Price, Authenticity
+HDMI_Cable         245  12: Quality, Length, Video, Audio, Resolution, Compatibility, Packaging, Delivery, Seller, Price, Authenticity, Durability
+Microphone         921  12: Sound, Noise, Authenticity, Packaging, Delivery, Seller, Price, Compatibility, Accessories, Setup, Durability, Warranty
+ChargingCable     1596  12: Speed, Wattage, Quality, Durability, Compatibility, Connector, Data, Length, Authenticity, Price, Delivery, Seller
+ChargingAdapter   2346  11: Wattage, Heating, Authenticity, Packaging, Delivery, Seller, Cable, Compatibility, Warranty, Price, Durability
+SmartPhone         150  10: Battery, Display, Charging, Connectivity, Sound, Packaging, Delivery, Seller, Authenticity, Price
+WebCam             124  12: Quality, LowLight, WideAngle, Microphone, Heating, Software, Packaging, Delivery, Seller, Authenticity, Price, Warranty
+SmartWatch         396  12: Battery, Display, Strap, Connectivity, Sensors, Sound, Build, Packaging, Delivery, Seller, Authenticity, Price
+Mouse             1944  14: Quality, Performance, Click_Buttons, Scroll_Wheel, Comfort_Design, Build, Connectivity, Battery, Lighting, Packaging, Delivery, Seller, Authenticity, Price
+Router            1510  14: Speed, Range, Stability, Setup, Firmware, Heating, Ports, Security, Authenticity, Packaging, Delivery, Seller, Price, Warranty
+Pendrive           418  10: Speed, Capacity, Heating, Build, Compatibility, Authenticity, Warranty, Packaging, Delivery, Price
+MemoryCards        142  10: Speed, Capacity, Reliability, Compatibility, Authenticity, Corruption, Packaging, Delivery, Seller, Price
+Keyboard          1515  13: Build, Keys, Noise, Layout, Lighting, Connectivity, Durability, Packaging, Delivery, Seller, Price, Warranty, Authenticity
+Earbuds           3296  15: Sound, Bass, Mic, Battery, ANC_ENC, Comfort_Fit, Connectivity, Controls, Build, Accessories, Packaging, Delivery, Seller, Price, Authenticity
+Earphones         2581  15: Sound, Microphone, Quality, Comfort, Design, Battery, Connectivity, Controls, Noise_Cancellation, Packaging, Price, Authenticity, Delivery, Performance, Compatibility
+Mini_Printer       449  10: Print, Photo, Text, Clarity, Paper, Battery, Connectivity, Packaging, Delivery, Price
+CC_Camera          554   9: Video_quality, Night_view, Network, App, Motion, Sound, Durability and quality, Packaging, Price
+Speaker            839  12: Sound, Price, Quality, Bass, Packaging, Delivery, Size, Cable, Lighting, Design, Bluetooth, Durability
+
+Total reviews: 20685   sheets: 19   unique aspect names: 74
+Aspects shared by most sheets: Price(19), Packaging(18), Delivery(18), Authenticity(16), Seller(14), Quality(8), Battery(7), Compatibility(7)
+Aspects unique to one sheet: 42
+
+Overall sentiment: {1: 13150, 0: 4544, -1: 2991}
+Aspect cells: {'n_pos': 18513, 'n_neg': 6414, 'n_zero': 243021, 'n_nan': 0, 'n_other': 0} of 267948
+Non-zero aspects per review: {0: 6785, 1: 7070, 2: 4137, 3: 1723, 4: 639, 5: 202, 6: 81, 7: 33, 8: 10, 9: 4, 15: 1}
+Reviews with >=1 non-zero aspect: 13900 (67.2%)
+Reviews with >=2 non-zero aspects: 6830 (33.0%)
+
+-- Meaning of aspect value 0 --
+If 0 also meant 'neutral', neutral-sentiment reviews would have no +-1 aspects more often.
+n_mentioned     0     1     2     3    All
+sentiment                                 
+-1            521  1266   750   454   2991
+0            2304  1005   711   524   4544
+1            3960  4799  2676  1715  13150
+All          6785  7070  4137  2693  20685
+Reviews with both a +1 and a -1 aspect (mixed): 1614 (7.8%)
+Overall sentiment of mixed reviews: {0: 870, 1: 466, -1: 278}
+
+-- Overall_Rating: per review or per product? --
+Products: 304 | products with >1 distinct rating value: 1
+Distinct rating values overall: [3.0, 3.1, 3.3, 3.4, 3.5, 3.6, 3.7, 3.9, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.70000000000001, 4.70000000000002, 4.8, 4.9, 5.0] | non-numeric: {'4,8': 75}
+
+Script (heuristic): {'english': 9301, 'bangla': 7633, 'banglish': 2466, 'mixed': 1244, 'other': 41}
+Review length (words): median=8 p90=28 p95=40 p99=76 max=290
+Duplicate review texts: 1315 (6.4%)
+Duplicate texts with conflicting overall sentiment: 130
+Most common texts: {'good': 90, 'good product': 79, 'nice': 26, 'valo': 23, 'nice product': 22, 'good quality': 21, 'very good': 20, 'best': 19}
+
+-- ENGLISH file alignment --
+main sheet       en sheet         rows_main rows_en labels_equal text_equal
+PowerBank        PowerBank              692     692          692         77
+CellPhone        Cellphone              967     967          967        103
+HDMI_Cable       HDMI_Cable             245     245          245         48
+Microphone       Microphone             921     921          921        100
+ChargingCable    CharginCable          1596    1475         1475        198
+ChargingAdapter  ChargingAdapter       2346    2346         2346        351
+SmartPhone       SmartPhone             150     150          150          7
+WebCam           WebCam                 124     124          124         21
+SmartWatch       SmartWatch             396     396          396          9
+Mouse            Mouse                 1944    1944         1944         96
+Router           Router                1510    1510         1510         91
+Pendrive         Pendrive               418     418          418         45
+MemoryCards      MemoryCards            142     142          142          2
+Keyboard         Keyboard              1515    1515         1515         14
+Earbuds          Earbuds               3296    3296         3296         46
+Earphones        Earphones             2581    2581         2581         69
+Mini_Printer     Mini_Printer           449     409          409         69
+CC_Camera        CC_Camera              554     554          554         10
+Speaker          Speaker                839     837          302        107
+TOTAL rows compared 20522: labels identical 19987 (97.4%), text identical 1463 (7.1%)
+
+################################################################################ 
+# BABSA
+################################################################################
+final_set.csv rows: 15857 | columns: ['text_content', 'AnnotatedAspect', 'AnnotatedSentiment', 'MacroCategory']
+Aspects per row: {1: 13248, 2: 2125, 3: 433, 4: 46, 5: 4, 8: 1}
+Rows where #aspects != #sentiments: 33 (0.2%)
+Sentiment labels (per aspect): {'neutral': 6915, 'negative': 6283, 'positive': 5758, 'nuetral': 8, 'postitive': 4, 'posive': 2, 'positve': 2, 'negative: negative': 2, 'neutal': 2, 'ngative': 1, 'neutarl': 1, 'postive': 1, 'negatve': 1, 'posituve': 1}
+MacroCategory: {'Book Review': 4680, 'Politics / Social Issue': 3787, 'General Comment': 2021, 'Religious / Spiritual Content': 1068, 'Personal Opinion': 1044, 'Culture / History': 860, 'Education': 387, 'Finance / Business': 380, 'Food Review': 344, 'Travel': 273, 'Entertainment': 257, 'Sports': 216, 'Customer Service': 143, 'Health / Fitness': 143, 'Technology': 117, 'Product Review': 72, 'Music Review': 35, 'News': 11, 'Lifestyle': 10, 'Agriculture ': 6, 'Gaming': 3}
+Aspect terms found verbatim in text: 15224 (80.1%) | case-insensitive: 15224 (80.1%)
+Examples NOT verbatim:
+  aspect='খাদ্য'  text='তো ? ফুড র\u200d্যাঞ্জার এর আগেও আরও অনেকে দেখিয়েছেন'
+  aspect='এলগোরিদম'  text='এটি প্রাথমিক তথ্য কাঠামো এবং অ্যালগরিদম শিখতে নতুনদের জন্য একটি দুর্দান্ত বই।লেখকরা নবীন শ'
+  aspect='শিল্প'  text='ফালতু । যা মন চায় তাই করে ফেলে । নষ্ট করতেছে ইন্ডাস্ট্রি টা ।'
+  aspect='স্থান'  text='এত জায়গা থাকতে মানুষ ঘুরতে কলকাতা যাইব কেন ?'
+  aspect='জল'  text='ভাই দেখেই মুখে পানি চলে এল'
+  aspect='ভদ্রলোক'  text='শর্মিলা দে কথাটা আপনি ভদ্রবাবেও বলতে পারতেন ভালো থাকবেন'
+
+Script (heuristic): {'bangla': 15625, 'mixed': 126, 'banglish': 71, 'english': 33, 'other': 2}
+Text length (words): median=13 p90=43 p95=46 p99=51 max=99
+Duplicate texts: 1722 (10.9%)
+Duplicate (text, aspect) with conflicting sentiment: 35
+
+Sentiment by MacroCategory (row-level first label):
+first_sent                     negative  negative: negative  neutal  neutarl  neutral  ngative  nuetral  positive  posituve  positve  posive  postitive    All
+MacroCategory                                                                                                                                                 
+Agriculture                           0                   0       0        0        4        0        0         2         0        0       0          0      6
+Book Review                         945                   0       0        0     1393        0        0      2341         0        0       0          1   4680
+Culture / History                   183                   0       0        0      414        1        0       262         0        0       0          0    860
+Customer Service                     91                   0       0        0       25        0        0        27         0        0       0          0    143
+Education                            66                   0       0        0      163        0        0       158         0        0       0          0    387
+Entertainment                        98                   0       0        0       71        0        0        88         0        0       0          0    257
+Finance / Business                  156                   0       0        0      175        0        0        48         0        1       0          0    380
+Food Review                          72                   0       0        0      146        0        1       125         0        0       0          0    344
+Gaming                                1                   0       0        0        1        0        0         1         0        0       0          0      3
+General Comment                     925                   0       1        0      747        0        0       348         0        0       0          0   2021
+Health / Fitness                     54                   0       0        0       65        0        0        24         0        0       0          0    143
+Lifestyle                             6                   0       0        0        4        0        0         0         0        0       0          0     10
+Music Review                          4                   0       0        0       22        0        0         9         0        0       0          0     35
+News                                  9                   0       0        0        1        0        0         1         0        0       0          0     11
+Personal Opinion                    406                   0       0        0      324        0        0       314         0        0       0          0   1044
+Politics / Social Issue            1817                   2       1        1     1569        0        5       390         0        0       2          0   3787
+Product Review                       54                   0       0        0       17        0        0         1         0        0       0          0     72
+Religious / Spiritual Content       184                   0       0        0      303        0        1       576         1        0       0          3   1068
+Sports                               54                   0       0        0      122        0        1        39         0        0       0          0    216
+Technology                           25                   0       0        0       55        0        0        37         0        0       0          0    117
+Travel                               55                   0       0        0      115        0        0       103         0        0       0          0    273
+All                                5205                   2       2        1     5736        1        8      4894         1        1       2          4  15857
+
+GitHub test_set.csv rows: 2466 | texts also in final_set: 1231 (52.0%)
+test_set sentiment: {'positive': 1119, 'negative': 626, 'neutral': 440, 'positive, positive': 55, 'negative, negative': 54, 'positive,positive': 26, 'neutral, neutral': 24, 'neutral, positive': 13, 'positive, neutral': 13, 'negative, neutral': 10, 'negative, positive': 10, 'negative ': 8, 'positive ': 8, 'negative,negative': 8, 'neutral, negative': 6, 'positive, positive, positive': 6, 'neutral, neutral, neutral': 5, 'negative, negative, negative': 4, 'positive, negative': 4, 'neutral,neutral': 3, 'neutral,negative': 2, 'positive, positive, negative': 2, 'negative, negative, negative, negative': 2, 'neutral, positive, positive': 1, 'negative,negative ': 1, 'negative , negative,negative': 1, 'neutral , neutral , neutral ': 1, 'positive , positive ': 1, 'neutral ': 1, 'neutral, neutral, neutral, negative': 1, 'neutral , neutral': 1, 'neutral, positive, negative': 1, 'neutral, negative, neutral': 1, 'positive,positive,positive': 1, 'neutral, neutral, positive': 1, 'positive,negative': 1, 'positive, neutral, neutral': 1, 'neutral, negative, negative': 1, 'positive, positive, neutral': 1, 'positive, neutral, positive': 1, 'positive , positive, positive': 1}
+test_set script: {'bangla': 2426, 'mixed': 23, 'banglish': 10, 'english': 6, 'other': 1}

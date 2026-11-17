@@ -1,0 +1,16 @@
+# Datasets are downloaded, not committed (BABSA is CC BY-NC-SA; EComReviews has its own terms)
+data/raw/
+data/processed/
+data/cache/
+
+# Training outputs
+runs/
+checkpoints/
+*.pt
+*.safetensors
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/

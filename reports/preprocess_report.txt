@@ -1,0 +1,30 @@
+######################################################################
+# EComReviews-BD
+######################################################################
+  ChargingCable: English aligned for first 1475/1596 rows
+  Mouse: English file lacks columns ['Lighting']
+  Earbuds: English file lacks columns ['Accessories', 'Build']
+  Earphones: English file lacks columns ['Delivery', 'Price']
+  Mini_Printer: English aligned for first 409/449 rows
+  Speaker: English aligned for first 258/839 rows
+Reviews: 20685 | English pairs aligned: 19943 | not aligned: 742
+Official split:  train=14479 val=3103 test=3103 | test texts also in train: 358
+Grouped split:   train=14479 val=3103 test=3103 | test texts also in train: 0
+Zero-shot split: train=17510 val=538 test=2637 | test=['CC_Camera', 'Mini_Printer', 'Router', 'WebCam'] val=['MemoryCards', 'SmartWatch']
+  zero-shot test aspects never seen in training (18): App, Clarity, Durability and quality, Firmware, LowLight, Motion, Night_view, Paper, Photo, Ports, Print, Range, Security, Software, Stability, Text, Video_quality, WideAngle
+Empty review texts: 0 (kept so split sizes match the paper; skipped at training time)
+
+######################################################################
+# BABSA
+######################################################################
+Rows in final_set.csv: 15857
+  dropped: aspect/sentiment count mismatch or unknown label: 8
+  sentiment broadcast to all aspects: 25
+Unique texts after merging duplicate rows: 14099 (rows merged: 1722)
+Aspect pairs dropped for conflicting labels on the same text: 43
+Aspect pairs: 16968 | verbatim in text: 13556 | not verbatim: 3412
+Labels: {'neutral': 5858, 'positive': 5479, 'negative': 5631}
+Grouped split: train=9871 val=2114 test=2114
+Test-set domains: {'Book Review': 648, 'Politics / Social Issue': 413, 'General Comment': 284, 'Religious / Spiritual Content': 149, 'Personal Opinion': 148, 'Culture / History': 126, 'Finance / Business': 56, 'Education': 54, 'Food Review': 52, 'Travel': 39, 'Entertainment': 38, 'Sports': 32, 'Health / Fitness': 21, 'Customer Service': 19, 'Technology': 17, 'Product Review': 9, 'Music Review': 5, 'Lifestyle': 2, 'Agriculture': 1, 'News': 1}
+
+Wrote C:\Users\USER\OneDrive\Desktop\new\quam-absa\data\processed\ecomreviews.jsonl, C:\Users\USER\OneDrive\Desktop\new\quam-absa\data\processed\babsa.jsonl, C:\Users\USER\OneDrive\Desktop\new\quam-absa\data\processed\aspect_inventory.json
