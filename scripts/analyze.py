@@ -51,7 +51,8 @@ def build(cfg, cache, recs):
     test_ds = ABSADataset(recs, cache, "_run", "test", babsa_pool=pool, babsa_neg=cfg["babsa_neg"], seed=cfg["seed"])
     model = QuAM(cache.dim, cache.query(OVERALL_QUERY), cache.stats, d_model=cfg["d_model"], heads=cfg["heads"],
                  layout=cfg["layout"], dropout=cfg["dropout"], presence_mode=cfg["presence_mode"],
-                 use_domain=not cfg["no_domain"], readout=cfg["readout"])
+                 use_domain=not cfg["no_domain"], readout=cfg["readout"],
+                 query_init=cfg.get("query_init", "free"))
     return test_ds, model
 
 

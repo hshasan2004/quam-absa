@@ -292,3 +292,18 @@ class BiXLSTMStack(nn.Module):
             x, s = blk(x, mask)
             state = s if s is not None else state
         return self.norm(x), state   # state: (fwd (C,n,m), bwd (C,n,m)) of the last block
+
+    def key_of(self, x):
+        """The key the last mLSTM block would write for a stand-alone input vector.
+
+        x: (N, d_model) -> (k_fwd, k_bwd), each (N, inner). Used to tie aspect queries to the
+        memory's own key space: the query for "battery" starts as the key under which the word
+        "battery" is stored, so presence is readable from the first step.
+        """
+        x = x[:, None]
+        mask = torch.ones(x.shape[:2], dtype=torch.bool, device=x.device)
+        for blk in self.blocks[:-1]:
+            x, _ = blk(x, mask)
+        last = self.blocks[-1]
+        a, _ = last.up(last.ln(x)).chunk(2, -1)
+        return tuple(cell.k(F.silu(cell.conv(a)))[:, 0] for cell in (last.fwd, last.bwd))

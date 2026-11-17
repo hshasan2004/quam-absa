@@ -45,7 +45,9 @@ for _seed in (1, 2):
 # in a slow start (eco_grouped_mm_s2: 28.8 vs 49.3 for seed 1).
 FINAL = {"fin_memory": G,
          "fin_meanpool": [*G, "--readout", "meanpool", "--presence-mode", "value"],
-         "fin_pres_val": [*G, "--presence-mode", "value"]}
+         "fin_pres_val": [*G, "--presence-mode", "value"],
+         # tied query initialisation: removes the random-query slow start
+         "fin_tied": [*G, "--query-init", "tied"]}
 for _seed in (42, 1, 2):
     for _name, _args in FINAL.items():
         RUNS.append((_name if _seed == 42 else f"{_name}_s{_seed}",

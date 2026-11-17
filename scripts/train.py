@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 from quam.data import (OVERALL_QUERY, SCRIPTS, ABSADataset, EncoderCache, LengthBucketSampler,  # noqa: E402
                        collate, default_cache_dir, load_records)
 from quam.metrics import Collector, babsa_metrics, best_eco_threshold, eco_metrics, per_group  # noqa: E402
-from quam.model import PRESENCE_MODES, QuAM  # noqa: E402
+from quam.model import PRESENCE_MODES, QUERY_INITS, QuAM  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -45,6 +45,8 @@ def parse():
     ap.add_argument("--presence-mode", choices=PRESENCE_MODES, default="mag+value")
     ap.add_argument("--readout", choices=["memory", "meanpool"], default="memory")
     ap.add_argument("--no-domain", action="store_true")
+    ap.add_argument("--query-init", choices=QUERY_INITS, default="free",
+                    help="tied: aspect query starts as the memory's own key for the aspect name")
     ap.add_argument("--overall-weight", type=float, default=0.5)
     ap.add_argument("--cons-weight", type=float, default=0.0, help="cross-lingual consistency (eco English pairs)")
     ap.add_argument("--babsa-neg", type=int, default=3)
@@ -161,7 +163,7 @@ def main():
 
     model = QuAM(cache.dim, cache.query(OVERALL_QUERY), cache.stats, d_model=args.d_model, heads=args.heads,
                  layout=args.layout, dropout=args.dropout, presence_mode=args.presence_mode,
-                 use_domain=not args.no_domain, readout=args.readout).to(dev)
+                 use_domain=not args.no_domain, readout=args.readout, query_init=args.query_init).to(dev)
     n_params = sum(p.numel() for p in model.parameters())
     log(f"QuAM params: {n_params / 1e6:.2f}M  layout={args.layout} d={args.d_model} heads={args.heads}")
 

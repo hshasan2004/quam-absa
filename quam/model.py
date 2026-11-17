@@ -15,6 +15,7 @@ from .data import SCRIPTS
 from .xlstm import BiXLSTMStack, mlstm_read
 
 PRESENCE_MODES = ("mag+value", "mag", "value")
+QUERY_INITS = ("free", "tied")
 
 
 def mlp(i, h, o, dropout=0.0):
@@ -35,10 +36,12 @@ class Standardize(nn.Module):
 
 class QuAM(nn.Module):
     def __init__(self, enc_dim, overall_query, stats, d_model=256, heads=4, layout="mmsm", dropout=0.1,
-                 presence_mode="mag+value", use_domain=True, readout="memory"):
+                 presence_mode="mag+value", use_domain=True, readout="memory", query_init="free"):
         super().__init__()
         assert presence_mode in PRESENCE_MODES and readout in ("memory", "meanpool")
+        assert query_init in QUERY_INITS
         self.presence_mode, self.use_domain, self.readout, self.heads = presence_mode, use_domain, readout, heads
+        self.tied = query_init == "tied"
         inner = 2 * d_model                    # mLSTM up-projection factor 2
         self.inner = inner
         self.tok_std = Standardize(stats["tok_mean"], stats["tok_std"])
@@ -48,6 +51,10 @@ class QuAM(nn.Module):
         self.script = nn.Embedding(len(SCRIPTS), d_model)
         self.stack = BiXLSTMStack(d_model, heads, layout, dropout)
         self.query = nn.Sequential(nn.LayerNorm(enc_dim), mlp(enc_dim, d_model, 2 * inner))  # fwd + bwd
+        if self.tied:
+            # tied: query = key_of(aspect) + learned correction, which starts at exactly zero
+            nn.init.zeros_(self.query[1][-1].weight)
+            nn.init.zeros_(self.query[1][-1].bias)
         self.asp_proj = nn.Sequential(nn.LayerNorm(enc_dim), nn.Linear(enc_dim, d_model))
         self.register_buffer("overall_q", overall_query.float().clone(), persistent=False)
 
@@ -78,6 +85,9 @@ class QuAM(nn.Module):
         """aq: (B, A, enc_dim) -> r (B, A, 2*inner), mag features (B, A, 2H+1)."""
         B, A, _ = aq.shape
         q = self.query(self.q_std(aq)).view(B, A, 2, self.heads, -1)
+        if self.tied:
+            kf, kb = self.stack.key_of(self.inp(self.tok_std(aq)).flatten(0, 1))
+            q = q + torch.stack([kf, kb], 1).view(B, A, 2, self.heads, -1)
         (sf, sb) = state
         rf, mf = mlstm_read(sf, q[:, :, 0])
         rb, mb = mlstm_read(sb, q[:, :, 1])
