@@ -1,0 +1,22 @@
+# BABSA error examples (most confident wrong sentiment)
+
+- **হিরু** gold=positive pred=negative (conf 0.98, Sports, verbatim=1): আশরাফুল এর কারনে বাংলাদেশ ক্রিকেট পরিচিত হয়েছে কিছু দালার এর কারনে আজ আমাদের হিরু জিরু হয়ে গেছে
+- **সৃজনশীলতা** gold=neutral pred=negative (conf 0.97, Education, verbatim=1): এরকম ভাবে শেখানোতে সৃজনশীলতা নেই।
+- **করিডর** gold=negative pred=neutral (conf 0.97, Culture / History, verbatim=1): করিডর নিয়ে আমীর খসরু
+- **ছাত্রদলের কমিটি** gold=neutral pred=negative (conf 0.97, Politics / Social Issue, verbatim=1): শরীয়তপুরে ছাত্রদলের কমিটি নিয়ে পক্ষে-বিপক্ষে মিছিল, দুই পক্ষের সংঘর্ষে আহত ১৫
+- **প্রোপার গাইডলাইন** gold=positive pred=neutral (conf 0.96, Education, verbatim=1): ছাত্রজীবনে কি কি করতে পারি তার প্রোপার গাইডলাইন পাবেন
+- **রোহিঙ্গা শিবির** gold=neutral pred=negative (conf 0.96, Politics / Social Issue, verbatim=1): কক্সবাজারে রোহিঙ্গা শিবিরের ৫৩ স্থানে ভূমিধস, ১ হাজার ৪০০ ঘর ক্ষতিগ্রস্ত
+- **ভবিষ্যত** gold=neutral pred=positive (conf 0.95, Book Review, verbatim=1): বইটি খুবই অসাধারণ। এখানে এমন সব তথ্য দেওয়া আছে যা আমাকে অনেক সাহায্য করছে!কিভাবে আমার ভবিষ্যত নিয়ে আমাকেই ভাবতে হবে, আর কিভাবে আমার জীবনকে আরও গতিশীল করতে পারি।ধন্যবাদ, লেখক সায়েক মাহ বুব! আশা করি এইরকম আরও অসাধারণ বই
+- **gospel truth** gold=neutral pred=negative (conf 0.95, General Comment, verbatim=1): বিজ্ঞানকে gospel truth বানাতে লেখক প্রচুর পরিশ্রম করেছেন। ^_°
+- **ঘটনা** gold=neutral pred=negative (conf 0.95, Book Review, verbatim=1): অনেস্টলি বলতে গেলে প্রথম খন্ডের তুলনায় ২ য় খন্ড একদমই ভালো লাগেনি। ঘটনাগুলো ছন্নছাড়া মনে হয়েছে। বলা চলে জোর করে হাসার চেষ্টা করেছি।
+- **তথ্যের ঘাটতি** gold=neutral pred=negative (conf 0.95, Book Review, verbatim=0): পৃষ্ঠার কোয়ালিটি একদমই বাজে। আর অন্যান্য বইয়ের তুলনায় তেমন একটা তথ্যবহুল না। তথ্যের প্রচুর ঘাটতি রয়েছে। আরও বিস্তারিতভাবে বইটা প্রকাশ করলে শিক্ষার্থীরা উপকৃত হতো।
+- **শব্দভান্ডার** gold=neutral pred=positive (conf 0.95, Book Review, verbatim=0): একটি ভিন্ন ধরণের শব্দভাণ্ডার বই।শব্দ মুখস্থ করার জন্য খুব কার্যকর।অনুশীলনগুলি অনেক বেশি সহায়ক।যারা এমবিএ, বিবিএ, বিসিএস বা কোনও ধরণের প্রতিযোগিতামূলক জন্য নিজেকে প্রস্তুত করছেন তারা এই বইটি পড়তে পারেন।যে কেউ এই বইটি তা
+- **কোনো চিঠি পাইনি** gold=negative pred=neutral (conf 0.95, Politics / Social Issue, verbatim=1): টিউলিপের কোনো চিঠি পাইনি: প্রধান উপদেষ্টার প্রেস সচিব
+- **নির্বাচনের** gold=negative pred=neutral (conf 0.95, Politics / Social Issue, verbatim=1): ডিসেম্বরের মধ্যেই নির্বাচনের দাবিতে অনড় বিএনপি
+- **জ্ঞান** gold=negative pred=positive (conf 0.95, Book Review, verbatim=1): এই বইটি ভাল লেখা আছে।তিন লেখক এই বইটি লিখেছেন।তাই প্রচুর জ্ঞান প্রত্যাশিত তবে এটি পান না।তবে এখনও এই বইটি থেকে শিখার জন্য অনেকগুলি তথ্য রয়েছে।ডাটাবেস বিকাশকারীদের জন্য একটি গুরুত্বপূর্ণ ডোমেন।সুতরাং বাংলায় ডাটাবেস সম্প
+- **গল্প** gold=neutral pred=negative (conf 0.95, Book Review, verbatim=1): তেমন একটা কাহিনি নেই গল্পটায়।
+- **আবু সাঈদ হত্যা মামলা** gold=negative pred=neutral (conf 0.95, Politics / Social Issue, verbatim=1): আবু সাঈদ হত্যা মামলার তদন্ত প্রতিবেদন দাখিলের সময় এক মাস বাড়ালেন ট্রাইব্যুনাল
+- **নির্বাচন** gold=negative pred=neutral (conf 0.95, Politics / Social Issue, verbatim=1): মতামত শুধুই নির্বাচন নাকি সুষ্ঠু ও নিরপেক্ষ নির্বাচন?
+- **লিও তলস্তয়** gold=positive pred=negative (conf 0.94, Book Review, verbatim=1): এখন পর্যন্ত লিখা শ্রেষ্ঠ উপন্যাসগুলোর একটি লিও তলস্তয়ের আন্না কারেনিনা। অনেক সমালোচক বলে থাকেন আন্না কারেনিনা একটি নিছক পরকিয়া প্রেমের কাহিনী। প্রেমের কাহিনী অবশ্যই তবে কোন ভাবেই সাধারণ না। ভালবাসা বিবাহিত-অবিবাহিত, সম
+- **গল্প** gold=negative pred=neutral (conf 0.94, Entertainment, verbatim=1): খুব জগন্য নাটক। এটা কোন ধরনের গল্প?
+- **নাজনীন সুলতানা** gold=positive pred=neutral (conf 0.94, Politics / Social Issue, verbatim=1): কুমিল্লা জেলার ইতিহাসে প্রথম নারী ওসি নাজনীন সুলতানা
