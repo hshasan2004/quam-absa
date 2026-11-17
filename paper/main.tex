@@ -1,0 +1,518 @@
+% QuAM-xLSTM: ACL / ARR submission draft.
+% Compile: pdflatex main; bibtex main; pdflatex main; pdflatex main   (or upload the folder to Overleaf)
+% All numbers come from paper/numbers.json (scripts/paper_numbers.py). Do not edit numbers by hand.
+\documentclass[11pt]{article}
+\usepackage[review]{acl}          % remove "review" for the camera-ready version
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb}
+\usepackage{bm}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc}
+
+\newcommand{\pmstd}[2]{#1{\scriptsize$\pm$#2}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\quam}{QuAM-xLSTM}
+
+\title{Read Once, Query Many: Aspect-Conditioned Reading of the xLSTM Matrix Memory\\
+for Aspect-Based Sentiment Analysis in Bangla, Banglish and English}
+
+% Anonymous for review. Fill in for the camera-ready version.
+\author{First Author \\ Daffodil International University \\ \texttt{email@domain} \And
+        Second Author (Supervisor) \\ Daffodil International University \\ \texttt{email@domain}}
+
+\begin{document}
+\maketitle
+
+% =========================================================================
+\begin{abstract}
+Aspect-based sentiment analysis (ABSA) of South Asian e-commerce reviews must cope with three
+scripts at once: Bangla, romanised Bangla (Banglish) and English, often mixed in one review.
+We present \quam{}, a model that reads a review \emph{once} with a bidirectional xLSTM and then
+answers every aspect by \emph{querying} the final mLSTM matrix memory with the aspect name. The
+memory has a fixed size per review, independent of review length and of how many aspects are
+asked. A hybrid read combines the memory with a pooled summary of the review for detecting
+whether an aspect is mentioned, while sentiment is read from the memory alone. On
+EComReviews-BD, \quam{} reaches a strict aspect--sentiment pair F1 of
+\pmstd{49.3}{3.2} over three seeds (53.3 as a seed ensemble), compared with 45.0 reported for a fine-tuned
+BanglaBERT, while training only 7.2M parameters on top of a frozen multilingual encoder on a
+4\,GB laptop GPU. We also identify an 11.5\% train--test text overlap in the standard split
+and release a leakage-free split and a zero-shot product-category split, and report the first
+aspect-sentiment results on the BABSA dataset (macro-F1 \pmstd{63.6}{1.2}, 65.7 as an ensemble).
+Ablations show that memory reading and pooling are complementary and that several plausible
+additions (an sLSTM block, cross-lingual consistency, tied query initialisation) do not help.
+\end{abstract}
+
+% =========================================================================
+\section{Introduction}
+
+Online marketplaces in Bangladesh produce large volumes of short product reviews. They are
+written in Bangla script, in Banglish (Bangla written in Latin script), in English, or in a
+mixture of these. Sellers and platforms need to know not only whether a review is positive,
+but \emph{which} aspects (price, delivery, battery, sound quality, \dots) are praised or criticised.
+This is aspect-based sentiment analysis \citep[ABSA;][]{pontiki2014semeval}.
+
+A common way to do ABSA with pretrained encoders is to pair the review with each aspect and
+classify the pair \citep{sun2019auxiliary}. The cost grows with the number of aspects: a review
+from a category with ten aspects is encoded ten times. Recent work has argued for reading a
+text once and answering every aspect from a shared representation
+\citep{xia2026dabs}. Recurrent models with \emph{matrix memories} make this especially
+natural. The mLSTM of xLSTM \citep{beck2024xlstm} stores a sequence as a sum of gated
+key--value outer products, $\mathbf{C}_T=\sum_t w_t\,\mathbf{v}_t\mathbf{k}_t^\top$, which can
+later be read with any query vector. If the query is the aspect name, the read returns what the
+review ``wrote'' under that aspect.
+
+We build on this observation and make four contributions:
+\begin{enumerate}
+  \itemsep0em
+  \item \textbf{\quam{}}, an ABSA model that reads a review once with a bidirectional mLSTM and
+  answers each aspect by querying the final matrix memory. The memory has a fixed size per
+  review, independent of review length and of the number of aspects. A hybrid read combines the
+  memory with a pooled summary for aspect detection (\S\ref{sec:method}).
+  \item \textbf{Strong results at low cost.} On EComReviews-BD \citep{haque2026ecomreviews},
+  \quam{} improves strict pair F1 over a fine-tuned BanglaBERT by 4.3 points as a single model
+  and 8.3 points as a seed ensemble, with 7.2M trainable parameters (\S\ref{sec:results}).
+  \item \textbf{Cleaner evaluation.} We find that 358 of the 3,103 test reviews (11.5\%) of the
+  standard split also occur in the training set. We release a leakage-free split and a
+  zero-shot split with four unseen product categories (\S\ref{sec:data}).
+  \item \textbf{The first sentiment benchmark on BABSA} \citep{rohman2025babsa}, a large Bangla
+  ABSA dataset, including results on implicit aspects that do not occur verbatim in the text.
+\end{enumerate}
+We also report what did \emph{not} work (\S\ref{sec:ablation}), since several of these
+negative results are informative about how matrix memories should be read.
+
+% =========================================================================
+\section{Related Work}
+
+\paragraph{Aspect-based sentiment analysis.}
+ABSA was popularised by the SemEval shared tasks \citep{pontiki2014semeval}. Memory-network
+models attend over word memories with the aspect as the query \citep{tang2016memnet}; pretrained
+encoders turned ABSA into sentence-pair classification \citep{sun2019auxiliary}. DABS
+\citep{xia2026dabs} encodes a sentence once into a depth-organised Transformer representation and
+reads it with lightweight aspect-specific readouts. Our work shares the single-pass goal, but
+the read-out operates on a recurrent \emph{matrix memory} of fixed size rather than on the full
+token sequence.
+
+\paragraph{xLSTM and matrix memories.}
+xLSTM \citep{beck2024xlstm} extends the LSTM \citep{hochreiter1997lstm} with exponential
+gating and introduces the sLSTM (scalar memory with memory mixing) and the mLSTM (matrix memory
+with a covariance update). The mLSTM is closely related to linear attention and fast weight
+programmers \citep{katharopoulos2020transformers,schlag2021fastweights}; state-space models such
+as Mamba \citep{gu2023mamba} are another efficient alternative to attention \citep{vaswani2017attention}.
+AF-MAT \citep{lawan2025afmat} applies xLSTM to English ABSA with aspect-aware gating, a flip-and-fuse
+block and pooled representations. To our knowledge, no prior work answers aspects by querying
+the final mLSTM memory, and no prior xLSTM ABSA work covers Bangla or Banglish.
+
+\paragraph{Bangla ABSA.}
+Early Bangla ABSA datasets were small and covered a few aspects \citep{rahman2018banglaabsa}.
+Bangla-specific encoders such as BanglaBERT \citep{bhattacharjee2022banglabert} and multilingual
+encoders \citep{devlin2019bert,conneau2020xlmr} are the usual baselines. EComReviews-BD
+\citep{haque2026ecomreviews} provides 20,685 Daraz reviews in Bangla, Banglish and English with
+aspect-level labels across 19 product categories. BABSA \citep{rohman2025babsa} provides about
+16k Bangla texts from many domains with aspect terms and their sentiment. \todo{state what results,
+if any, the BABSA release reports (we found only aspect-term extraction results); verify.}
+
+% =========================================================================
+\section{Method}
+\label{sec:method}
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+  font=\small, >=Stealth,
+  box/.style={draw, rounded corners=2pt, align=center, minimum height=7mm, inner sep=3pt},
+  enc/.style={box, fill=gray!12},
+  rnn/.style={box, fill=blue!10},
+  mem/.style={box, fill=orange!18, minimum width=16mm, minimum height=12mm},
+  head/.style={box, fill=green!12},
+]
+  \node[enc] (txt) {review tokens\\(Bangla / Banglish / English)};
+  \node[enc, below=6mm of txt] (xlmr) {frozen XLM-R\\+ standardise};
+  \node[rnn, right=8mm of xlmr] (pre) {[domain + script]\\prefix token};
+  \node[rnn, right=6mm of pre, minimum width=30mm] (bi) {bidirectional mLSTM\\$\times 2$ blocks};
+  \node[mem, right=8mm of bi] (C) {$\mathbf{C}_T,\mathbf{n}_T$\\(fwd, bwd)};
+  \node[box, fill=gray!8, below=8mm of bi] (pool) {mean-pooled\\tokens $\bar{\mathbf{x}}$};
+  \node[enc, above=10mm of C] (asp) {aspect name $a$\\(``battery'')};
+  \node[rnn, right=6mm of asp] (q) {query MLP\\$\mathbf{q}_a$};
+  \node[head, right=10mm of C, yshift=7mm] (sent) {sentiment\\$\mathbf{r}_a\!\to$ pos/neu/neg};
+  \node[head, right=10mm of C, yshift=-9mm] (pres) {presence\\$[\bm{\mu}_a;\mathbf{r}_a;\mathbf{u}_a]\!\to p_a$};
+  \node[head, below=6mm of pres] (ov) {overall sentiment\\(presence-weighted)};
+
+  \draw[->] (txt) -- (xlmr);
+  \draw[->] (xlmr) -- (pre);
+  \draw[->] (pre) -- (bi);
+  \draw[->] (bi) -- node[above]{final} (C);
+  \draw[->] (bi) -- (pool);
+  \draw[->] (asp) -- (q);
+  \draw[->] (q) |- ($(C.north)+(0,3mm)$) -- node[left, pos=0.2]{read} (C.north);
+  \draw[->] (C.east) -- ++(4mm,0) |- (sent.west);
+  \draw[->] (C.east) -- ++(4mm,0) |- (pres.west);
+  \draw[->] (pool.east) -| ($(pres.south west)+(2mm,0)$);
+  \draw[->] (sent.east) -- ++(3mm,0) |- (ov.east);
+  \draw[->] (pres.south) -- (ov.north);
+\end{tikzpicture}
+\caption{\quam{}. A review is read once; every aspect of its product category is answered by a
+query into the final mLSTM matrix memory (one read per aspect, $O(d^2)$ each, independent of review
+length). Sentiment uses the retrieved value $\mathbf{r}_a$; presence additionally uses the memory
+magnitude $\bm{\mu}_a$ and a pooled summary $\mathbf{u}_a$.}
+\label{fig:model}
+\end{figure*}
+
+\paragraph{Task.}
+For a review $x$ from product category (domain) $c$ with aspect inventory $\mathcal{A}_c$, the
+model predicts for every $a\in\mathcal{A}_c$ whether $a$ is mentioned (presence) and, if so, its
+polarity; it also predicts the overall sentiment of the review. On BABSA the aspects are given
+terms, and the task is their 3-class sentiment.
+
+\paragraph{Input encoding.}
+Tokens are encoded by a frozen XLM-R base \citep{conneau2020xlmr}. Aspect names (e.g.\
+\textit{click buttons}) are encoded by the same model and mean-pooled. XLM-R has a few outlier
+(``rogue'') feature dimensions \citep{timkey2021rogue}; in our data one feature has mean 17.9
+while the typical feature standard deviation is 0.08, which makes all aspect embeddings nearly
+parallel (mean pairwise cosine 0.989). We therefore z-score every feature with statistics from
+the training cache before any learned layer; without this the presence head did not learn at all.
+A learned prefix token encodes the product category and the detected script
+(Bangla, English, Banglish, mixed).
+
+\paragraph{Bidirectional mLSTM.}
+The token sequence is processed by $L{=}2$ pre-norm residual mLSTM blocks \citep{beck2024xlstm}
+(model width $d{=}256$, up-projection to 512, 4 heads of size 128), each run left-to-right and
+right-to-left. For one direction and head, with input and forget gates $i_t,f_t$ (exponential
+input gate, sigmoid forget gate in log space) the memory update is
+\begin{align}
+\mathbf{C}_t &= f_t\,\mathbf{C}_{t-1} + i_t\,\mathbf{v}_t\mathbf{k}_t^\top, &
+\mathbf{n}_t &= f_t\,\mathbf{n}_{t-1} + i_t\,\mathbf{k}_t ,
+\end{align}
+computed in the stabilised parallel form with a running log-scale $m_t$. We soft-cap gate
+pre-activations with $15\tanh(\cdot/15)$, as in xLSTM 7B \citep{beck2025xlstm7b}; without it,
+$e^{-m}$ overflowed and almost all batches produced non-finite gradients. Our implementation
+matches the official parallel kernel to $9\times10^{-16}$ in double precision.
+
+\paragraph{Querying the memory.}
+After the last block we keep only $(\mathbf{C}_T,\mathbf{n}_T,m_T)$ of both directions. Each aspect
+is mapped to a query $\mathbf{q}_a$ per head and direction by an MLP over its standardised
+embedding, and read exactly as the mLSTM reads at its own output step:
+\begin{align}
+\mathbf{r}_a &= \frac{\mathbf{C}_T\,\mathbf{q}_a}{\max\!\big(|\mathbf{n}_T^\top\mathbf{q}_a|,\,e^{-m_T}\big)},\\
+\mu_a &= \log\!\big(|\mathbf{n}_T^\top\mathbf{q}_a| + e^{-m_T}\big) + m_T .
+\end{align}
+$\mathbf{r}_a$ is the value retrieved under key $\mathbf{q}_a$; $\mu_a$ equals
+$\log(|\tilde{\mathbf{n}}_T^\top\mathbf{q}_a|+1)$ for the un-stabilised normaliser $\tilde{\mathbf{n}}_T$,
+i.e.\ how much key mass the review wrote in the direction of the aspect. It is independent of the
+stabiliser and has a bounded gradient at $\mathbf{n}^\top\mathbf{q}=0$. Reads from all heads and
+both directions are concatenated ($\mathbf{r}_a\in\mathbb{R}^{1024}$, $\bm{\mu}_a\in\mathbb{R}^{8}$,
+plus log review length). The memory per review is $2\times4\times128\times129 = 132{,}096$ numbers,
+whatever the review length and however many aspects are asked.
+
+\paragraph{Hybrid presence, memory sentiment.}
+Sentiment is predicted from the memory read alone,
+$P(y_a\mid x)=\mathrm{softmax}(\mathrm{MLP}_s(\mathrm{LN}(\mathbf{r}_a)))$; for EComReviews-BD,
+which has no neutral aspect labels, the neutral logit is masked. For presence we found the memory
+alone to be accurate but unstable to train (\S\ref{sec:ablation}). The hybrid read adds a pooled
+summary $\mathbf{u}_a=\mathrm{LN}(\mathbf{W}[\bar{\mathbf{x}};\mathbf{q}_a])$ of the final token states:
+$p_a=\sigma(\mathrm{MLP}_p([\bm{\mu}_a;\mathbf{r}_a;\mathbf{u}_a]))$.
+
+\paragraph{Overall sentiment.}
+Each aspect receives a learned importance $w_a=\mathrm{softplus}(g([\mathbf{a};\mathbf{c}]))\,p_a$
+conditioned on aspect and category. The overall logits are
+$\mathrm{MLP}_o\big(\sum_a w_a P_a^{+},\sum_a w_a P_a^{-},\sum_a w_a P_a^{0},\sum_a w_a\big)
++\mathrm{MLP}_g(\mathbf{r}_{\textit{overall}})$, where the second term reads the memory with the
+query ``overall opinion''.
+
+\paragraph{Training.}
+The loss is binary cross-entropy for presence, cross-entropy for aspect sentiment on mentioned
+aspects, and $0.5\times$ cross-entropy for overall sentiment. BABSA only annotates mentioned
+aspects, so for each review we add three aspect terms sampled from other training reviews that
+do not occur in the text as negatives for presence.
+
+% =========================================================================
+\section{Data and Splits}
+\label{sec:data}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lrr}
+\toprule
+ & EComReviews-BD & BABSA \\
+\midrule
+reviews / texts & 20,685 & 14,099 \\
+aspects & 74 (19 categories) & 16,968 pairs \\
+labels & pos / neg (+ absent) & pos / neu / neg \\
+scripts & Bn, Banglish, En, mixed & 98.5\% Bn \\
+train / val / test & 14,479 / 3,103 / 3,103 & 9,871 / 2,114 / 2,114 \\
+\bottomrule
+\end{tabular}
+\caption{Datasets after preprocessing. BABSA duplicate rows are merged per text; 20\% of its
+aspect terms do not occur verbatim in the text (implicit aspects).}
+\label{tab:data}
+\end{table}
+
+\paragraph{EComReviews-BD.}
+Each review carries a label in $\{-1,0,1\}$ for every aspect of its category, where 0 means
+not mentioned (91\% of cells). The official split (70/15/15, \texttt{random\_state}=42) is
+reproduced following the dataset description.\footnote{\todo{We could not verify that our
+reproduction selects exactly the same rows as the dataset paper; state this.}} We found that
+358 of its 3,103 test texts (11.5\%) also occur in the training set, mostly short generic
+reviews. We therefore also use a \textbf{grouped} split of the same sizes in which identical
+normalised texts never cross splits, and a \textbf{zero-shot} split whose test set consists of
+four categories never seen in training (Router, WebCam, Mini\_Printer, CC\_Camera; 18 of their
+aspect names never occur in training). The dataset also contains NLLB \citep{nllb2022} English
+translations, aligned for 19,943 reviews, which we use only in the consistency ablation.
+
+\paragraph{BABSA.}
+We merge duplicate rows per text, drop 43 conflicting aspect labels, and create a grouped split
+stratified by domain and label. The release is sorted by label, so shuffling before splitting
+is essential.
+
+\paragraph{Metrics.}
+Following \citet{haque2026ecomreviews}, the main metric on EComReviews-BD is \emph{strict pair}
+micro P/R/F1: a prediction is correct only if a mentioned aspect is detected \emph{and} its
+polarity is right. We also report detection F1, macro-F1 of detection over aspect names,
+polarity accuracy on mentioned aspects, and overall-sentiment macro-F1. The presence threshold
+is chosen on validation and applied unchanged to test. On BABSA we report 3-class sentiment
+accuracy and macro-F1 over gold aspects, and presence AUROC.
+
+% =========================================================================
+\section{Experimental Setup}
+
+All models are trained with AdamW \citep{loshchilov2019adamw} (learning rate $10^{-3}$, weight
+decay 0.05, 5\% warm-up, cosine decay), batch size 32, 15 epochs, dropout 0.1, gradient clipping
+at 1.0 and bf16 autocast, selecting the epoch with the best validation score. XLM-R token states
+are pre-computed once (maximum 256 tokens; 24 of 50,577 texts are truncated), so a training run
+takes about 11 minutes on a single RTX 2050 laptop GPU with 4\,GB of memory (peak 1.8\,GB). We
+report mean $\pm$ sample standard deviation over three seeds (42, 1, 2), and additionally a
+\emph{seed ensemble} that averages the three models' probabilities
+\citep{lakshminarayanan2017ensembles}. Baseline numbers for fine-tuned BanglaBERT
+\citep{bhattacharjee2022banglabert}, mBERT \citep{devlin2019bert} and XLM-R
+\citep{conneau2020xlmr} are taken from \citet{haque2026ecomreviews}. Code and splits:
+\todo{repository URL (anonymised for review)}.
+
+% =========================================================================
+\section{Results}
+\label{sec:results}
+
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{llcccccc}
+\toprule
+split & model & pair P & pair R & \textbf{pair F1} & det.\ F1 & polarity acc & overall F1 \\
+\midrule
+\multirow{6}{*}{official}
+ & XLM-R (fine-tuned)$^\dagger$      & 27.3 & 80.9 & 40.8 & -- & -- & -- \\
+ & mBERT (fine-tuned)$^\dagger$      & 29.8 & 74.7 & 42.6 & -- & -- & -- \\
+ & BanglaBERT (fine-tuned)$^\dagger$ & 31.8 & 77.1 & 45.0 & -- & -- & -- \\
+ & \quam{} (single)    & \pmstd{51.2}{8.4} & \pmstd{48.3}{2.1} & \textbf{\pmstd{49.3}{3.2}} & \pmstd{54.9}{3.2} & \pmstd{86.6}{0.3} & \pmstd{71.6}{1.4} \\
+ & \quam{} (3-seed ensemble) & 55.2 & 51.4 & \textbf{53.3} & 58.8 & 87.6 & 73.1 \\
+\midrule
+\multirow{2}{*}{grouped}
+ & \quam{} (single)    & \pmstd{46.9}{6.4} & \pmstd{48.0}{2.0} & \pmstd{47.2}{2.3} & \pmstd{52.9}{2.0} & \pmstd{86.3}{0.3} & \pmstd{68.4}{0.3} \\
+ & \quam{} (ensemble)  & 51.3 & 50.7 & 51.0 & 56.1 & 87.8 & 70.0 \\
+\midrule
+\multirow{2}{*}{zero-shot}
+ & \quam{} (single)    & \pmstd{39.1}{7.5} & \pmstd{42.5}{3.5} & \pmstd{40.2}{2.8} & \pmstd{45.9}{2.9} & \pmstd{84.8}{0.2} & \pmstd{60.9}{0.9} \\
+ & \quam{} (ensemble)  & 44.4 & 39.8 & 42.0 & 46.8 & 86.2 & 61.7 \\
+\bottomrule
+\end{tabular}
+\caption{EComReviews-BD test results. $^\dagger$Reported by \citet{haque2026ecomreviews} with full
+fine-tuning; our encoder is frozen and only 7.2M parameters are trained. Single-model rows are
+mean$\pm$std over three seeds. \emph{grouped}: no text overlap between train and test;
+\emph{zero-shot}: four product categories unseen in training.}
+\label{tab:main}
+\end{table*}
+
+\paragraph{Main results.}
+Table~\ref{tab:main} shows that \quam{} improves strict pair F1 on the official split from 45.0
+(BanglaBERT) to \pmstd{49.3}{3.2}, and to 53.3 with a three-seed ensemble. The profile of the
+errors differs: the fine-tuned encoders reach high recall (74--81) at low precision (27--32),
+while \quam{} is balanced (P 51.2, R 48.3). Once an aspect is detected its polarity is right in
+86.6\% of cases, so detection, not polarity, is the bottleneck. Removing the 11.5\% train--test
+overlap (grouped split) costs about two points (47.2), which indicates that the official numbers
+are moderately inflated by memorised duplicates.
+
+\paragraph{Zero-shot categories.}
+On four unseen product categories \quam{} keeps a pair F1 of \pmstd{40.2}{2.8}: general aspects
+such as \textit{price} or \textit{quality} transfer well (detection F1 68.7 for aspects with
+${\geq}500$ training mentions; seed 42). Aspect \emph{names} never seen in training are much harder
+(detection F1 12.8 for the hybrid model). Interestingly, the memory-only model detects them better
+(24.9, single seed), which suggests that the pooled path in the hybrid fits the training aspect
+inventory, while the pure memory query generalises to new names. \todo{confirm with three seeds
+before making this claim strongly.}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lcc}
+\toprule
+ & single (3 seeds) & ensemble \\
+\midrule
+sentiment accuracy & \pmstd{63.5}{1.2} & 65.5 \\
+\textbf{sentiment macro-F1} & \textbf{\pmstd{63.6}{1.2}} & \textbf{65.7} \\
+\quad verbatim aspects (n=2,060) & \pmstd{64.7}{1.1} & 66.5 \\
+\quad implicit aspects (n=510) & \pmstd{58.1}{1.5} & 60.9 \\
+presence AUROC & \pmstd{85.1}{0.4} & 86.0 \\
+\bottomrule
+\end{tabular}
+\caption{First aspect-sentiment results on BABSA (grouped split, test).}
+\label{tab:babsa}
+\end{table}
+
+\paragraph{BABSA.}
+Table~\ref{tab:babsa} gives, to our knowledge, the first aspect-level sentiment results on
+BABSA: macro-F1 \pmstd{63.6}{1.2} (65.7 ensemble). Aspects that do not appear verbatim in the
+text are harder (58.1 vs.\ 64.7) but far above chance, showing that the aspect query retrieves
+related content rather than only matching surface strings. Neutral is the hardest class
+(Figure~\ref{fig:cm}, right).
+
+% =========================================================================
+\section{Ablations and Negative Results}
+\label{sec:ablation}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{lcc}
+\toprule
+model (grouped split) & pair F1 & overall F1 \\
+\midrule
+\multicolumn{3}{l}{\textit{three seeds, full 15 epochs}} \\
+\quad hybrid (\quam{})       & \textbf{\pmstd{47.2}{2.3}} & \pmstd{68.4}{0.3} \\
+\quad mean pooling only      & \pmstd{45.8}{1.4} & \pmstd{66.9}{0.7} \\
+\quad memory read only       & \pmstd{43.3}{7.3} & \pmstd{69.5}{0.6} \\
+\quad memory, value-only presence & \pmstd{45.3}{3.3} & \pmstd{69.3}{0.5} \\
+\quad memory, tied query init & \pmstd{41.4}{4.9} & \pmstd{69.6}{0.6} \\
+\multicolumn{3}{l}{\textit{three-seed ensembles}} \\
+\quad hybrid                 & \textbf{51.0} & 70.0 \\
+\quad memory read only       & 49.3 & 71.2 \\
+\quad mean pooling only      & 47.6 & 68.5 \\
+\midrule
+\multicolumn{3}{l}{\textit{memory model, seed 42, early stopping}} \\
+\quad base (2 mLSTM blocks)  & 45.4 & 69.2 \\
+\quad presence from $\bm{\mu}$ only & 29.2 & 68.6 \\
+\quad no domain/script prefix & 40.8 & 67.3 \\
+\quad 3 mLSTM blocks         & 38.4 & 68.5 \\
+\quad + sLSTM block (m-m-s-m) & 30.0 & 56.0 \\
+\quad + cross-lingual consistency & 39.1 & 68.9 \\
+\bottomrule
+\end{tabular}
+\caption{Ablations on the grouped split (test). The lower block are single runs and should be
+read as indicative only.}
+\label{tab:ablation}
+\end{table}
+
+\paragraph{Memory and pooling are complementary.}
+Table~\ref{tab:ablation} compares how the aspect is read. A pure memory read gives the best
+overall-sentiment F1 (69.5) and high polarity accuracy, but its pair F1 varies strongly across seeds
+(35.1 to 49.3). Inspecting training curves, the unstable seeds spend many epochs with a nearly
+constant presence loss before detection starts to improve; mean pooling does not show this
+plateau. Combining both (hybrid) gives the best and a stable pair F1. Averaging seeds removes most
+of the instability: as ensembles, the memory read (49.3) is clearly better than pooling (47.6),
+and the hybrid is best (51.0).
+
+\paragraph{Where presence comes from.}
+The memory magnitude $\bm{\mu}_a$ alone is a weak presence signal (29.2), while the retrieved
+value is strong (46.6 for the same seed). The magnitude is therefore best seen as an auxiliary
+feature.
+
+\paragraph{What did not help.}
+\textit{Tied query initialisation}, which starts each aspect query as the key the memory would
+write for the aspect name, raises the presence signal at initialisation for an unlucky seed
+(AUROC of the raw read 0.44$\rightarrow$0.55) but does not improve final results.
+\textit{Per-aspect thresholds} tuned on validation lower test pair F1 (45.4$\rightarrow$42.9),
+because validation and test differ for rare aspects. \textit{Cross-lingual consistency} between a
+review and its NLLB translation hurts (39.1), plausibly because the machine translations of
+Banglish are noisy. Adding an \textit{sLSTM block} lowered results (30.0 grouped; 39.7 vs.\ 52.2
+official) and made training 4.5$\times$ slower; note that these runs used early stopping with
+patience 4, which interacts with the slow-start behaviour described above, so the sLSTM result
+should be re-examined. The \textit{domain/script prefix} helps by 4.6 points.
+
+% =========================================================================
+\section{Analysis}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.49\columnwidth]{figures/cm_eco_joint.pdf}\hfill
+\includegraphics[width=0.49\columnwidth]{figures/cm_babsa.pdf}
+\caption{Test confusion matrices (rows: gold; percentages are row-normalised). Left:
+EComReviews-BD aspect--sentiment pairs, official split, seed 42. Right: BABSA aspect sentiment.}
+\label{fig:cm}
+\end{figure}
+
+\paragraph{Missed negative aspects.}
+Figure~\ref{fig:cm} (left) shows that 58\% of mentioned negative aspects are predicted as absent,
+against 38\% of positive ones. Complaints are often expressed indirectly (``stopped working after
+two days'') rather than by naming the aspect, which makes them harder to detect. When a negative
+aspect is detected, its polarity is right in two thirds of cases (281 of 417).
+
+\paragraph{Rare aspects.}
+Detection quality depends strongly on how often an aspect occurs in training
+(Figure~\ref{fig:freq}): detection F1 is 55.1 for aspects with ${\geq}500$ training mentions,
+38.1 for 50--499 and 16.5 below 50 (grouped split, seed 42). Since 39 of the 74 aspects are rare,
+macro-F1 over aspects stays low (18.5) even though micro scores are competitive. This mirrors the
+dataset: 42 aspects occur in a single category only.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\columnwidth]{figures/aspect_f1_vs_freq.pdf}
+\caption{Per-aspect detection F1 against the number of training mentions (grouped split; marker
+size = test mentions).}
+\label{fig:freq}
+\end{figure}
+
+\paragraph{Scripts.}
+Pair F1 is highest for English reviews (47.8) and lower for Bangla (44.6), mixed (43.1) and
+Banglish (42.5) (official split, seed 42). Banglish has no standard spelling and is
+under-represented in the encoder's pretraining data; it is also the script with the noisiest
+machine translations.
+
+\paragraph{Efficiency.}
+With pre-computed encoder states, the \quam{} head processes about 1,100 test reviews per second
+(0.9\,ms per review including all aspect reads, 0.46\,GB peak GPU memory) on the RTX 2050. These
+numbers exclude the frozen XLM-R forward pass, which is shared by all aspects and can be cached.
+Because every aspect is a single $O(d^2)$ read of a fixed-size memory, the cost of adding aspects
+is independent of review length.
+
+% =========================================================================
+\section{Conclusion}
+
+We showed that the final matrix memory of an mLSTM can serve as a queryable summary of a review
+for aspect-based sentiment analysis: one read per aspect, no re-encoding, and a fixed-size state.
+On multilingual Bangladeshi e-commerce reviews this outperforms fine-tuned Transformer encoders
+while training only a small model on a laptop GPU, and it gives the first sentiment benchmark on
+BABSA. Reading the memory is best for sentiment, pooling is more robust for detection, and their
+combination works best. Future work should address the slow start of memory-based detection
+directly, rare and implicitly expressed (especially negative) aspects, and fine-tuning the encoder
+jointly with the memory read.
+
+% =========================================================================
+\section*{Limitations}
+\begin{itemize}
+  \itemsep0em
+  \item Our reproduction of the official EComReviews-BD split may not select exactly the same
+  rows as the baseline paper; the comparison with reported baselines is therefore approximate.
+  The baselines fine-tune the encoder while ours is frozen.
+  \item We use three seeds. The memory-only model has high seed variance; conclusions about it
+  rest on the ensemble results. The lower part of Table~\ref{tab:ablation} uses single runs.
+  \item The sLSTM ablation was run with early stopping and may underestimate the sLSTM.
+  \item The presence threshold is global; detection of rare and negative aspects remains weak.
+  \item The efficiency numbers exclude the encoder forward pass.
+  \item Both datasets come from Bangladesh; we did not test other languages or domains.
+\end{itemize}
+
+\section*{Ethics Statement}
+Both datasets are public: EComReviews-BD under CC BY 4.0 and BABSA under CC BY-NC-SA 4.0, which
+restricts our use of BABSA to non-commercial research. Reviews may contain names of sellers or
+products but no personal data were collected by us. ABSA systems can be used to filter or rank
+reviews; errors that systematically miss negative aspects (\S7) could favour sellers, so
+deployments should be audited for this. \todo{AI-assistance disclosure as required by the venue
+and by Daffodil International University, e.g.: ``We used an AI assistant for code development
+and drafting; all content was checked by the authors.''}
+
+\bibliography{references}
+
+\end{document}
