@@ -1,4 +1,4 @@
-"""Diagnostics for the presence-learning problem: query anisotropy and memory-read statistics."""
+﻿"""Diagnostics for the presence-learning problem: query anisotropy and memory-read statistics."""
 import sys
 from pathlib import Path
 
@@ -46,7 +46,7 @@ with torch.no_grad():
     print(f"share of reads where |n^T q| < exp(-m) (denominator floored): {(dot.abs() < floor).float().mean():.2%}")
     print(f"share of reads with |n^T q| < 1e-3 * |n||q| (near-zero denominator): "
           f"{(dot.abs() < 1e-3 * n.norm(dim=-1)[:, None] * q.norm(dim=-1)).float().mean():.2%}")
-    r, mag = model.read(tokens, mask, (sf, sb), batch["aq"])
+    r, mag, _ = model.read(tokens, mask, (sf, sb), batch["aq"])
     raw_r = torch.einsum("bhde,bahe->bahd", C, q) / torch.maximum(dot.abs(), floor)[..., None]
     print(f"raw read norm: median={raw_r.norm(dim=-1).median():.2f}  max={raw_r.norm(dim=-1).max():.2e}")
     am = batch["a_mask"]

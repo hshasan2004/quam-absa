@@ -1,4 +1,4 @@
-"""Evaluation metrics.
+﻿"""Evaluation metrics.
 
 EComReviews (all category aspects are queried for every review):
   detection   - is the aspect mentioned? micro P/R/F1 and macro-F1 over aspect names
@@ -57,7 +57,12 @@ def eco_metrics(a, rv, threshold):
     if not sel.any():
         return {}
     gold, prob, gs, ps, names = a["gold_pres"][sel] == 1, a["prob"][sel], a["gold_sent"][sel], a["pred_sent"][sel], a["name"][sel]
-    pred = prob > threshold
+    if isinstance(threshold, dict):            # per-aspect thresholds {name: t, "_default": t}
+        t_rows = np.array([threshold.get(n, threshold["_default"]) for n in names])
+        pred = prob > t_rows
+        threshold = "per-aspect"
+    else:
+        pred = prob > threshold
     d_p, d_r, d_f = prf(int((pred & gold).sum()), int(pred.sum()), int(gold.sum()))
     macro = [f1_score(gold[names == n], pred[names == n], zero_division=0) for n in np.unique(names) if gold[names == n].any()]
     tp_pair = int((pred & gold & (ps == gs)).sum())
@@ -76,6 +81,28 @@ def eco_metrics(a, rv, threshold):
 def best_eco_threshold(a, rv, grid=np.arange(0.05, 0.96, 0.05)):
     scores = [(eco_metrics(a, rv, float(t)).get("pair_F1", 0.0), float(t)) for t in grid]
     return max(scores)[1]
+
+
+def per_aspect_thresholds(a, global_t, min_gold=50, grid=np.arange(0.05, 0.96, 0.05)):
+    """Tune one detection threshold per aspect on validation predictions.
+
+    Aspects with fewer than `min_gold` validation mentions keep the global threshold.
+    Each threshold maximises that aspect's strict pair F1 (aspect + polarity).
+    """
+    sel = a["dataset"] == "eco"
+    names, gold, prob = a["name"][sel], a["gold_pres"][sel] == 1, a["prob"][sel]
+    ok = a["pred_sent"][sel] == a["gold_sent"][sel]
+    thr = {"_default": float(global_t)}
+    for n in np.unique(names):
+        m = names == n
+        if gold[m].sum() < min_gold:
+            continue
+        def f1_at(t):
+            pred = prob[m] > t
+            return prf(int((pred & gold[m] & ok[m]).sum()), int(pred.sum()), int(gold[m].sum()))[2]
+        # ties are broken towards the global threshold (less overfitting to validation)
+        thr[str(n)] = max((f1_at(t), -abs(t - global_t), float(t)) for t in grid)[2]
+    return thr
 
 
 def babsa_metrics(a):

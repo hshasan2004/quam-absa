@@ -47,7 +47,15 @@ FINAL = {"fin_memory": G,
          "fin_meanpool": [*G, "--readout", "meanpool", "--presence-mode", "value"],
          "fin_pres_val": [*G, "--presence-mode", "value"],
          # tied query initialisation: removes the random-query slow start
-         "fin_tied": [*G, "--query-init", "tied"]}
+         "fin_tied": [*G, "--query-init", "tied"],
+         # hybrid: presence from memory read + pooled tokens, sentiment/overall from the memory
+         "fin_hybrid": [*G, "--readout", "hybrid"]}
+# Final model = hybrid. 3 seeds on every task (official split, zero-shot, BABSA).
+FINAL.update({
+    "hyb_official": ["--data", "eco", "--eco-split", "official", *FULL, "--readout", "hybrid"],
+    "hyb_zeroshot": ["--data", "eco", "--eco-split", "zeroshot", *FULL, "--readout", "hybrid"],
+    "hyb_babsa": ["--data", "babsa", *FULL, "--readout", "hybrid"],
+})
 for _seed in (42, 1, 2):
     for _name, _args in FINAL.items():
         RUNS.append((_name if _seed == 42 else f"{_name}_s{_seed}",

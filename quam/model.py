@@ -16,6 +16,10 @@ from .xlstm import BiXLSTMStack, mlstm_read
 
 PRESENCE_MODES = ("mag+value", "mag", "value")
 QUERY_INITS = ("free", "tied")
+# memory:   everything from the memory read
+# meanpool: everything from mean-pooled tokens + aspect query (AF-MAT style ablation)
+# hybrid:   presence from memory read + pooled tokens; sentiment and overall from the memory read
+READOUTS = ("memory", "meanpool", "hybrid")
 
 
 def mlp(i, h, o, dropout=0.0):
@@ -38,7 +42,7 @@ class QuAM(nn.Module):
     def __init__(self, enc_dim, overall_query, stats, d_model=256, heads=4, layout="mmsm", dropout=0.1,
                  presence_mode="mag+value", use_domain=True, readout="memory", query_init="free"):
         super().__init__()
-        assert presence_mode in PRESENCE_MODES and readout in ("memory", "meanpool")
+        assert presence_mode in PRESENCE_MODES and readout in READOUTS
         assert query_init in QUERY_INITS
         self.presence_mode, self.use_domain, self.readout, self.heads = presence_mode, use_domain, readout, heads
         self.tied = query_init == "tied"
@@ -60,11 +64,14 @@ class QuAM(nn.Module):
 
         r_dim = 2 * inner
         self.r_norm = nn.LayerNorm(r_dim)
-        if readout == "meanpool":              # ablation: AF-MAT-style pooled tokens + aspect
+        if readout in ("meanpool", "hybrid"):  # pooled tokens + aspect query
             self.pool_proj = nn.Linear(d_model + 2 * inner, r_dim)
+        if readout == "hybrid":
+            self.p_norm = nn.LayerNorm(r_dim)
         self.sent_head = mlp(r_dim, d_model, 3, dropout)
         mag_dim = 2 * heads + 1                # log|n^T q| per head and direction, plus log length
         pres_in = {"mag+value": mag_dim + r_dim, "mag": mag_dim, "value": r_dim}[presence_mode]
+        pres_in += r_dim if readout == "hybrid" else 0
         self.pres_head = mlp(pres_in, d_model // 2, 1, dropout)
         self.importance = mlp(2 * d_model, d_model // 2, 1)
         self.agg = mlp(4, 32, 3)
@@ -92,12 +99,17 @@ class QuAM(nn.Module):
         rf, mf = mlstm_read(sf, q[:, :, 0])
         rb, mb = mlstm_read(sb, q[:, :, 1])
         r = torch.cat([rf.flatten(2), rb.flatten(2)], -1)
-        if self.readout == "meanpool":
+        rp = None
+        if self.readout in ("meanpool", "hybrid"):
             pooled = (tokens * mask[..., None]).sum(1) / mask.sum(1, keepdim=True)
-            r = self.pool_proj(torch.cat([pooled[:, None].expand(B, A, -1), q.flatten(2)], -1))
+            rp = self.pool_proj(torch.cat([pooled[:, None].expand(B, A, -1), q.flatten(2)], -1))
+            if self.readout == "meanpool":
+                r, rp = rp, None
+            else:
+                rp = self.p_norm(rp)
         log_len = torch.log(mask.sum(1).float())[:, None, None].expand(B, A, 1)
         mag = torch.cat([mf, mb, log_len], -1) / 10.0
-        return self.r_norm(r), mag
+        return self.r_norm(r), mag, rp
 
     # ------------------------------------------------------------------ forward
     def forward(self, batch):
@@ -105,13 +117,15 @@ class QuAM(nn.Module):
         tokens, mask, state = self.encode(x, mask, batch["dom_q"], batch["script"])
         B = x.shape[0]
         allq = torch.cat([aq, self.overall_q.expand(B, 1, -1)], 1)
-        r, mag = self.read(tokens, mask, state, allq)
+        r, mag, rp = self.read(tokens, mask, state, allq)
         r_asp, r_all, mag = r[:, :-1], r[:, -1], mag[:, :-1]
 
         sent = self.sent_head(r_asp)
         no_neu = ~batch["allow_neutral"].to(sent.device)
         sent = sent.masked_fill(no_neu[:, None, None] & (torch.arange(3, device=sent.device) == 1), -1e4)
         pres_in = {"mag+value": torch.cat([mag, r_asp], -1), "mag": mag, "value": r_asp}[self.presence_mode]
+        if rp is not None:
+            pres_in = torch.cat([pres_in, rp[:, :-1]], -1)
         pres = self.pres_head(pres_in).squeeze(-1)
 
         # overall = learned aggregation of aspect sentiments + direct "overall opinion" read

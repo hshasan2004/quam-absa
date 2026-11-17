@@ -1,4 +1,4 @@
-"""Train and evaluate QuAM-xLSTM.
+﻿"""Train and evaluate QuAM-xLSTM.
 
 Examples
   python scripts/train.py --data eco --eco-split official --name eco_official
@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 from quam.data import (OVERALL_QUERY, SCRIPTS, ABSADataset, EncoderCache, LengthBucketSampler,  # noqa: E402
                        collate, default_cache_dir, load_records)
 from quam.metrics import Collector, babsa_metrics, best_eco_threshold, eco_metrics, per_group  # noqa: E402
-from quam.model import PRESENCE_MODES, QUERY_INITS, QuAM  # noqa: E402
+from quam.model import PRESENCE_MODES, QUERY_INITS, READOUTS, QuAM  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -43,7 +43,7 @@ def parse():
     ap.add_argument("--layout", default="mmsm")
     ap.add_argument("--dropout", type=float, default=0.1)
     ap.add_argument("--presence-mode", choices=PRESENCE_MODES, default="mag+value")
-    ap.add_argument("--readout", choices=["memory", "meanpool"], default="memory")
+    ap.add_argument("--readout", choices=READOUTS, default="memory")
     ap.add_argument("--no-domain", action="store_true")
     ap.add_argument("--query-init", choices=QUERY_INITS, default="free",
                     help="tied: aspect query starts as the memory's own key for the aspect name")

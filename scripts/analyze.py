@@ -1,4 +1,4 @@
-"""Paper analysis for trained runs: confusion matrices, per-class / per-aspect / per-domain /
+﻿"""Paper analysis for trained runs: confusion matrices, per-class / per-aspect / per-domain /
 per-script tables, PR / ROC / threshold curves, error examples and efficiency numbers.
 
     python scripts/analyze.py eco_official_mm babsa_mm [...]
@@ -28,7 +28,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
 from quam.data import OVERALL_QUERY, SCRIPTS, SENT_NAMES, ABSADataset, EncoderCache, load_records  # noqa: E402
-from quam.metrics import babsa_metrics, eco_metrics, prf  # noqa: E402
+from quam.metrics import babsa_metrics, eco_metrics, per_aspect_thresholds, prf  # noqa: E402
 from quam.model import QuAM  # noqa: E402
 from train import make_loader, to_dev  # noqa: E402
 
@@ -43,17 +43,20 @@ def load_run(name):
     return run, cfg, met
 
 
-def build(cfg, cache, recs):
+def build(cfg, cache, recs, eval_seed=None):
+    """eval_seed fixes the sampled BABSA negatives (so several runs can be ensembled row by row)."""
     pool = sorted({a["name"] for r in recs if r["dataset"] == "babsa" and r["splits"].get("grouped") == "train"
                    for a in r["aspects"]})
     for r in recs:
         r["splits"]["_run"] = r["splits"][cfg["eco_split"]] if r["dataset"] == "eco" else r["splits"]["grouped"]
-    test_ds = ABSADataset(recs, cache, "_run", "test", babsa_pool=pool, babsa_neg=cfg["babsa_neg"], seed=cfg["seed"])
+    kw = dict(babsa_pool=pool, babsa_neg=cfg["babsa_neg"], seed=cfg["seed"] if eval_seed is None else eval_seed)
+    test_ds = ABSADataset(recs, cache, "_run", "test", **kw)
+    val_ds = ABSADataset(recs, cache, "_run", "val", **kw)
     model = QuAM(cache.dim, cache.query(OVERALL_QUERY), cache.stats, d_model=cfg["d_model"], heads=cfg["heads"],
                  layout=cfg["layout"], dropout=cfg["dropout"], presence_mode=cfg["presence_mode"],
                  use_domain=not cfg["no_domain"], readout=cfg["readout"],
                  query_init=cfg.get("query_init", "free"))
-    return test_ds, model
+    return test_ds, val_ds, model
 
 
 @torch.no_grad()
@@ -71,7 +74,8 @@ def collect(model, loader, dev):
         torch.cuda.synchronize(); fwd_time += time.perf_counter() - t0
         pres = out["presence"].float().sigmoid().cpu().numpy()
         sprob = out["sentiment"].float().softmax(-1).cpu().numpy()
-        ov = out["overall"].float().argmax(-1).cpu().numpy()
+        oprob = out["overall"].float().softmax(-1).cpu().numpy()
+        ov = oprob.argmax(-1)
         am, scr = batch["a_mask"].numpy(), batch["script"].numpy()
         n_rev += len(batch["ids"]); n_asp += int(am.sum())
         for i in range(len(batch["ids"])):
@@ -86,11 +90,13 @@ def collect(model, loader, dev):
                 A["gold_sent"].append(batch["sentiment"][i, j].item())
                 A["pred_sent"].append(int(sprob[i, j].argmax()))
                 A["sent_conf"].append(float(sprob[i, j].max()))
+                A["sprob"].append(sprob[i, j])
                 A["verbatim"].append(batch["verbatim"][i, j].item())
             for k, v in meta.items():
                 R[k].append(v)
             R["gold"].append(batch["overall"][i].item())
             R["pred"].append(int(ov[i]))
+            R["oprob"].append(oprob[i])
     eff = {"forward_seconds": fwd_time, "reviews": n_rev, "aspect_queries": n_asp,
            "reviews_per_s": n_rev / fwd_time, "ms_per_review": 1000 * fwd_time / n_rev,
            "peak_gpu_GB": torch.cuda.max_memory_allocated() / 2**30}
@@ -126,7 +132,7 @@ def md_table(header, rows):
 
 
 def pct(x):
-    return "–" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{100 * x:.1f}"
+    return "â€“" if x is None or (isinstance(x, float) and np.isnan(x)) else f"{100 * x:.1f}"
 
 
 def report_table(gold, pred, labels):
@@ -374,7 +380,7 @@ def main():
         which = {"eco": ("eco",), "babsa": ("babsa",), "both": ("eco", "babsa")}[cfg["data"]]
         recs = load_records(which)
         texts = {r["id"]: r["text"] for r in recs}
-        test_ds, model = build(cfg, cache, recs)
+        test_ds, val_ds, model = build(cfg, cache, recs)
         model.load_state_dict(torch.load(run / "best.pt", map_location="cpu"))
         model.to(dev)
         n_params = sum(p.numel() for p in model.parameters())
@@ -403,7 +409,19 @@ def main():
         if "eco" in met["test"]:
             freq = Counter(a["query"] for r in recs if r["dataset"] == "eco" and r["splits"]["_run"] == "train"
                            for a in r["aspects"] if a["label"] != "none")
-            analyze_eco(A, R, met["test"]["eco"]["threshold"], freq, texts, out, md, js)
+            t = met["test"]["eco"]["threshold"]
+            analyze_eco(A, R, t, freq, texts, out, md, js)
+            # per-aspect thresholds, tuned on validation only
+            Av, _, _ = collect(model, make_loader(val_ds, 64, False, 0), dev)
+            thr = per_aspect_thresholds(Av, t)
+            e1, e2 = js["eco_metrics"], eco_metrics(A, R, thr)
+            js["eco_metrics_per_aspect_threshold"], js["per_aspect_thresholds"] = e2, thr
+            md += ["## Per-aspect thresholds (tuned on validation, applied to test)\n",
+                   f"{len(thr) - 1} aspects with at least 50 validation mentions get their own threshold; "
+                   f"the rest keep the global one ({t:.2f}).\n",
+                   md_table(["threshold", "pair P", "pair R", "pair F1", "det F1", "det macro-F1"],
+                            [[name, pct(e["pair_P"]), pct(e["pair_R"]), pct(e["pair_F1"]), pct(e["det_F1"]),
+                              pct(e["det_macroF1"])] for name, e in (("global", e1), ("per-aspect", e2))]), ""]
         if "babsa" in met["test"]:
             analyze_babsa(A, texts, out, md, js)
         (out / "summary.md").write_text("\n".join(md), encoding="utf-8")
