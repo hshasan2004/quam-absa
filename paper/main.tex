@@ -107,8 +107,13 @@ gating and introduces the sLSTM (scalar memory with memory mixing) and the mLSTM
 with a covariance update). The mLSTM is closely related to linear attention and fast weight
 programmers \citep{katharopoulos2020transformers,schlag2021fastweights}; state-space models such
 as Mamba \citep{gu2023mamba} are another efficient alternative to attention \citep{vaswani2017attention}.
-AF-MAT \citep{lawan2025afmat} applies xLSTM to English ABSA with an aspect-gated mLSTM, a
-flip-and-fuse block that processes reversed sequences, and an mLSTM-gated fusion module. To our knowledge, no prior work answers aspects by querying
+AF-MAT \citep{lawan2025afmat} applies xLSTM to English ABSA (SemEval-2014 and Twitter): the
+aspect representation gates the mLSTM memory updates, a flip-and-fuse block processes reversed
+sequences, and the final representation is mean-pooled over tokens for each sentence--aspect pair.
+GateMABSA \citep{lawan2025gatemabsa} uses specialised mLSTMs for multimodal (text and image) ABSA
+on English tweets. In both, the aspect \emph{modulates how the sequence is written} into memory;
+in our model the aspect is a \emph{query that reads} the finished memory, so one encoding serves
+all aspects. To our knowledge, no prior work answers aspects by querying
 the final mLSTM memory, and no prior xLSTM ABSA work covers Bangla or Banglish.
 
 \paragraph{Bangla ABSA.}
