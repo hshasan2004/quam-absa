@@ -1,0 +1,22 @@
+# BABSA error examples (most confident wrong sentiment)
+
+- **মুসলিম মেয়র** gold=positive pred=neutral (conf 0.98, Politics / Social Issue, verbatim=1): নিউইয়র্ক কি ইতিহাসে প্রথম কোনো মুসলিম মেয়র পেতে যাচ্ছে
+- **বই** gold=neutral pred=positive (conf 0.98, Book Review, verbatim=1): থ্রি ইডিয়টস সিনেমা দেখার পর জানতে পারলাম সেই সিনেমা টা চেতন ভগতের বই থেকে বানানো। এরপর চেতন ভগত এর বইটি পড়লাম। চেতন ভগতের বই গুলি সিনেম্যাটিক স্টাইলে শুরু হয় এবং প্রতি পাতায় পাতায় যার রেশ ছড়িয়ে পড়ে।
+- **শূন্য পদে** gold=negative pred=neutral (conf 0.97, Health / Fitness, verbatim=1): লক্ষ্মীপুরের স্বাস্থ্যসেবা শূন্য পদে চিকিৎসক নিয়োগ দিন
+- **দালাল** gold=positive pred=negative (conf 0.97, Politics / Social Issue, verbatim=1): এত দূরের দেশ থেকে কেন ? রাশিয়া বন্ধুরাস্ট্র হওয়া সত্বেও দালালের মাধ্যমে কেন ? দেশ গমের কোন সংকট না থাকা সত্বেও এত বিপুল গম কার স্বার্থে ক্রয় ? এখন গমের দাম কম , এ গম দেশে আসলে দেশের কৃষকের গম কে কিনবে ? গম কেনার আদৌ ক
+- **জামায়াত** gold=neutral pred=negative (conf 0.97, Politics / Social Issue, verbatim=0): ইসলামী ব্যাংকের বর্তমান অবস্থা দেখে মনে হয় শাসক হিসাবে জামাতের সাথেই আওয়ামী লীগ পারে না !
+- **টিকিট** gold=negative pred=neutral (conf 0.96, Politics / Social Issue, verbatim=0): ময়মনসিংহের - টিকেট এর দায়িত্বটা 360 ডিগ্রি যমুনা টেলিভিশন কে দেওয়া হোক
+- **মতামত** gold=neutral pred=positive (conf 0.96, Religious / Spiritual Content, verbatim=0): ছোটবেলা থেকে যে বইগুলোর নাম শুনে এসেছি সেগুলোর মধ্যে এটি একটি। বাংলাদেশ তথা উপমহাদেশের মুসলমানদের মধ্যে শিক্ষা বিস্তারে সৈয়দ আমির আলীর নাম চিরস্মরণীয় হয়ে থাকবে। ধারণা ছিলো বইটি শিক্ষা ব্যবস্থার উপরেই হবে। তবে এখানে দে
+- **আরাফাতে হাজিরা** gold=positive pred=neutral (conf 0.96, Religious / Spiritual Content, verbatim=1): আরাফাতে হাজিরা পবিত্র হজ আজ
+- **হিমু** gold=neutral pred=positive (conf 0.96, Personal Opinion, verbatim=1): আমার প্রিয় একটি চরিত্র 'হিমু'
+- **সংসদে সংস্কার নয়** gold=negative pred=neutral (conf 0.95, Politics / Social Issue, verbatim=1): সারোয়ার তুষারের কলাম নির্বাচিত সংসদে সংস্কার নয়, সংস্কারের ভিত্তিতেই নতুন সংসদ দরকার
+- **গল্প** gold=neutral pred=positive (conf 0.95, Book Review, verbatim=1): গল্পটি সত্যিই দুর্দান্ত ছিল
+- **ট্রায়াল** gold=positive pred=neutral (conf 0.95, Personal Opinion, verbatim=0): আমার মতো কে কে এর সঠিক বিচার চান
+- **পরিকল্পনা সাজাচ্ছে** gold=positive pred=neutral (conf 0.95, Sports, verbatim=1): ২০২৬ বিশ্বকাপ সামনে রেখে যে পরিকল্পনা সাজাচ্ছে আনচেলত্তির ব্রাজিল
+- **রোহিঙ্গা শিবির** gold=neutral pred=negative (conf 0.95, Politics / Social Issue, verbatim=1): কক্সবাজারে রোহিঙ্গা শিবিরের ৫৩ স্থানে ভূমিধস, ১ হাজার ৪০০ ঘর ক্ষতিগ্রস্ত
+- **সংস্করন** gold=neutral pred=negative (conf 0.95, General Comment, verbatim=0): শেষ সংস্করণ ????
+- **আল মাহমুদ** gold=neutral pred=positive (conf 0.95, Book Review, verbatim=1): জীবনমুখী দৃষ্টি নিয়ে আল মাহমুদের গল্পে আর্বিভাব। কত সামান্য ঘটনাকে এই কবি ও কথা শিল্পী, একটি নিখুত গল্পে পরিণত করতে পারেন তার গল্পগুলোই সু-স্পষ্ট প্রমাণ। প্রিয় পঞ্চমী গ্রন্থের একটি গল্প - জলবেশ্যা।কবি আল মাহমুদের ছোটগল
+- **gospel truth** gold=neutral pred=negative (conf 0.95, General Comment, verbatim=1): বিজ্ঞানকে gospel truth বানাতে লেখক প্রচুর পরিশ্রম করেছেন। ^_°
+- **হামাসের প্রতিক্রিয়া** gold=negative pred=neutral (conf 0.95, Politics / Social Issue, verbatim=1): যুক্তরাষ্ট্রের যুদ্ধবিরতি প্রস্তাবে হামাসের প্রতিক্রিয়া অগ্রহণযোগ্য: ট্রাম্পের বিশেষ দূত
+- **নবী সাল্লাহুআলাইহি ওয়াসাল্লাম** gold=negative pred=positive (conf 0.94, Religious / Spiritual Content, verbatim=1): বইটি পড়া হয়নি তবে, যেখানে আমাদের নবী সাল্লাহুআলাইহি ওয়াসাল্লাম এর নাম বইটি অসাধারণ হওয়ারই কথা। মূল্য অর্থাৎ % আরও দেয়া দরকার।
+- **প্রেম** gold=neutral pred=negative (conf 0.94, Book Review, verbatim=1): লেখক কি প্রেম ছাড়া আর কিছু বুঝে না??? ২-১ পাতা পড়েই বুঝে গেলাম বাজে একটা বই।
