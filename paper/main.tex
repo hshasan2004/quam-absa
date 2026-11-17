@@ -107,8 +107,8 @@ gating and introduces the sLSTM (scalar memory with memory mixing) and the mLSTM
 with a covariance update). The mLSTM is closely related to linear attention and fast weight
 programmers \citep{katharopoulos2020transformers,schlag2021fastweights}; state-space models such
 as Mamba \citep{gu2023mamba} are another efficient alternative to attention \citep{vaswani2017attention}.
-AF-MAT \citep{lawan2025afmat} applies xLSTM to English ABSA with aspect-aware gating, a flip-and-fuse
-block and pooled representations. To our knowledge, no prior work answers aspects by querying
+AF-MAT \citep{lawan2025afmat} applies xLSTM to English ABSA with an aspect-gated mLSTM, a
+flip-and-fuse block that processes reversed sequences, and an mLSTM-gated fusion module. To our knowledge, no prior work answers aspects by querying
 the final mLSTM memory, and no prior xLSTM ABSA work covers Bangla or Banglish.
 
 \paragraph{Bangla ABSA.}
@@ -264,7 +264,7 @@ split sizes (14,479 / 3,103 / 3,103). Because the order in which the 19 category
 concatenated before splitting is not specified, our test set may not contain exactly the same
 reviews as in \citet{haque2026ecomreviews}.} We found that
 358 of its 3,103 test texts (11.5\%) also occur in the training set, mostly short generic
-reviews. We therefore also use a \textbf{grouped} split of the same sizes in which identical
+reviews (median length two words, e.g.\ ``good product''). We therefore also use a \textbf{grouped} split of the same sizes in which identical
 normalised texts never cross splits, and a \textbf{zero-shot} split whose test set consists of
 four categories never seen in training (Router, WebCam, Mini\_Printer, CC\_Camera; 18 of their
 aspect names never occur in training). The dataset also contains NLLB \citep{nllb2022} English
@@ -277,8 +277,9 @@ is essential.
 
 \paragraph{Metrics.}
 Following \citet{haque2026ecomreviews}, the main metric on EComReviews-BD is \emph{strict pair}
-micro P/R/F1: a prediction is correct only if a mentioned aspect is detected \emph{and} its
-polarity is right. We also report detection F1, macro-F1 of detection over aspect names,
+P/R/F1: a prediction is correct only if a mentioned aspect is detected \emph{and} its polarity is
+right. The original paper does not state how these scores are averaged; we use micro-averaging
+over all (review, aspect) pairs, so the comparison with the reported baselines is approximate. We also report detection F1, macro-F1 of detection over aspect names,
 polarity accuracy on mentioned aspects, and overall-sentiment macro-F1. The presence threshold
 is chosen on validation and applied unchanged to test. On BABSA we report 3-class sentiment
 accuracy and macro-F1 over gold aspects, and presence AUROC.
@@ -324,8 +325,9 @@ split & model & pair P & pair R & \textbf{pair F1} & det.\ F1 & polarity acc & o
  & \quam{} (ensemble)  & 44.4 & 39.8 & 42.0 & 46.8 & 86.2 & 61.7 \\
 \bottomrule
 \end{tabular}
-\caption{EComReviews-BD test results. $^\dagger$Reported by \citet{haque2026ecomreviews} with full
-fine-tuning; our encoder is frozen and only 7.2M parameters are trained. Single-model rows are
+\caption{EComReviews-BD test results. $^\dagger$Reported by \citet{haque2026ecomreviews} (models
+trained with AdamW, learning rate $2\times10^{-5}$); their split and score averaging may differ
+from ours (\S\ref{sec:data}). Our encoder is frozen and only 7.2M parameters are trained. Single-model rows are
 mean$\pm$std over three seeds. \emph{grouped}: no text overlap between train and test;
 \emph{zero-shot}: four product categories unseen in training.}
 \label{tab:main}
@@ -448,8 +450,9 @@ EComReviews-BD aspect--sentiment pairs, official split, seed 42. Right: BABSA as
 
 \paragraph{Missed negative aspects.}
 Figure~\ref{fig:cm} (left) shows that 58\% of mentioned negative aspects are predicted as absent,
-against 38\% of positive ones. Complaints are often expressed indirectly (``stopped working after
-two days'') rather than by naming the aspect, which makes them harder to detect. When a negative
+against 38\% of positive ones. Negative aspects are less frequent (26\% of mentioned aspects in
+the test set), and we hypothesise that complaints are more often expressed without naming the aspect;
+verifying this requires a manual study that we leave to future work. When a negative
 aspect is detected, its polarity is right in two thirds of cases (281 of 417).
 
 \paragraph{Rare aspects.}
