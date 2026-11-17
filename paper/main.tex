@@ -56,9 +56,11 @@ additions (an sLSTM block, cross-lingual consistency, tied query initialisation)
 
 Online marketplaces in Bangladesh produce large volumes of short product reviews. They are
 written in Bangla script, in Banglish (Bangla written in Latin script), in English, or in a
-mixture of these. Sellers and platforms need to know not only whether a review is positive,
+mixture of these, a code-mixed setting that is known to be hard for sentiment models
+\citep{patwa2020sentimix}. Sellers and platforms need to know not only whether a review is positive,
 but \emph{which} aspects (price, delivery, battery, sound quality, \dots) are praised or criticised.
-This is aspect-based sentiment analysis \citep[ABSA;][]{pontiki2014semeval}.
+This is aspect-based sentiment analysis
+\citep[ABSA;][]{pontiki2014semeval,pontiki2016semeval,zhang2023absasurvey}.
 
 A common way to do ABSA with pretrained encoders is to pair the review with each aspect and
 classify the pair \citep{sun2019auxiliary}. The cost grows with the number of aspects: a review
@@ -93,9 +95,16 @@ negative results are informative about how matrix memories should be read.
 \section{Related Work}
 
 \paragraph{Aspect-based sentiment analysis.}
-ABSA was popularised by the SemEval shared tasks \citep{pontiki2014semeval}. Memory-network
-models attend over word memories with the aspect as the query \citep{tang2016memnet}; pretrained
-encoders turned ABSA into sentence-pair classification \citep{sun2019auxiliary}. DABS
+ABSA was popularised by the SemEval shared tasks \citep{pontiki2014semeval,pontiki2016semeval};
+\citet{zhang2023absasurvey} give a recent survey. Early neural models used aspect-conditioned
+attention over LSTM states \citep{wang2016atae} or memory networks that attend over word memories
+with the aspect as the query \citep{tang2016memnet}; pretrained encoders turned ABSA into
+sentence-pair classification \citep{sun2019auxiliary}. Closest to our setting of predefined aspect
+categories, \citet{schmitt2018joint} predict presence and polarity of all categories jointly, and
+\citet{hu2019can} constrain attention so that multiple aspects of one sentence attend to different
+words. Large language models do well on simple sentiment tasks but lag behind small models trained on
+in-domain data on complex tasks that require structured sentiment information, such as ABSA,
+while they excel in few-shot settings \citep{zhang2024llmsentiment}. DABS
 \citep{xia2026dabs} encodes a sentence once into a depth-organised Transformer representation and
 reads it with lightweight aspect-specific readouts. Our work shares the single-pass goal, but
 the read-out operates on a recurrent \emph{matrix memory} of fixed size rather than on the full
@@ -105,8 +114,9 @@ token sequence.
 xLSTM \citep{beck2024xlstm} extends the LSTM \citep{hochreiter1997lstm} with exponential
 gating and introduces the sLSTM (scalar memory with memory mixing) and the mLSTM (matrix memory
 with a covariance update). The mLSTM is closely related to linear attention and fast weight
-programmers \citep{katharopoulos2020transformers,schlag2021fastweights}; state-space models such
-as Mamba \citep{gu2023mamba} are another efficient alternative to attention \citep{vaswani2017attention}.
+programmers \citep{katharopoulos2020transformers,schlag2021fastweights}. RWKV \citep{peng2023rwkv},
+RetNet \citep{sun2023retnet} and state-space models such as Mamba \citep{gu2023mamba} are other
+recurrent alternatives to attention \citep{vaswani2017attention}.
 AF-MAT \citep{lawan2025afmat} applies xLSTM to English ABSA (SemEval-2014 and Twitter): the
 aspect representation gates the mLSTM memory updates, a flip-and-fuse block processes reversed
 sequences, and the final representation is mean-pooled over tokens for each sentence--aspect pair.
@@ -117,7 +127,11 @@ all aspects. To our knowledge, no prior work answers aspects by querying
 the final mLSTM memory, and no prior xLSTM ABSA work covers Bangla or Banglish.
 
 \paragraph{Bangla ABSA.}
-Early Bangla ABSA datasets were small and covered a few aspects \citep{rahman2018banglaabsa}.
+Early Bangla ABSA datasets were small and covered a few aspects
+\citep{rahman2018banglaabsa,masum2020banabsa}. Sentence-level Bangla sentiment has received more
+attention, including noisy social-media text \citep{islam2021sentnob} and the BLP-2023 shared task
+\citep{hasan2023blp}; BanglishRev \citep{shamael2024banglishrev} provides large-scale Bangla, English
+and code-mixed product reviews with ratings but without aspect labels.
 Bangla-specific encoders such as BanglaBERT \citep{bhattacharjee2022banglabert} and multilingual
 encoders \citep{devlin2019bert,conneau2020xlmr} are the usual baselines. EComReviews-BD
 \citep{haque2026ecomreviews} provides 20,685 Daraz reviews in Bangla, Banglish and English with
