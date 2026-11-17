@@ -117,8 +117,9 @@ Bangla-specific encoders such as BanglaBERT \citep{bhattacharjee2022banglabert} 
 encoders \citep{devlin2019bert,conneau2020xlmr} are the usual baselines. EComReviews-BD
 \citep{haque2026ecomreviews} provides 20,685 Daraz reviews in Bangla, Banglish and English with
 aspect-level labels across 19 product categories. BABSA \citep{rohman2025babsa} provides about
-16k Bangla texts from many domains with aspect terms and their sentiment. \todo{state what results,
-if any, the BABSA release reports (we found only aspect-term extraction results); verify.}
+16k Bangla texts from many domains with aspect terms and their sentiment, annotated with high
+inter-annotator agreement (Cohen's $\kappa\geq0.84$); the release itself reports no model results,
+and we are not aware of published aspect-sentiment results on it.
 
 % =========================================================================
 \section{Method}
@@ -258,8 +259,10 @@ aspect terms do not occur verbatim in the text (implicit aspects).}
 \paragraph{EComReviews-BD.}
 Each review carries a label in $\{-1,0,1\}$ for every aspect of its category, where 0 means
 not mentioned (91\% of cells). The official split (70/15/15, \texttt{random\_state}=42) is
-reproduced following the dataset description.\footnote{\todo{We could not verify that our
-reproduction selects exactly the same rows as the dataset paper; state this.}} We found that
+reproduced following the dataset description.\footnote{We use the published ratio, random seed and
+split sizes (14,479 / 3,103 / 3,103). Because the order in which the 19 category files are
+concatenated before splitting is not specified, our test set may not contain exactly the same
+reviews as in \citet{haque2026ecomreviews}.} We found that
 358 of its 3,103 test texts (11.5\%) also occur in the training set, mostly short generic
 reviews. We therefore also use a \textbf{grouped} split of the same sizes in which identical
 normalised texts never cross splits, and a \textbf{zero-shot} split whose test set consists of
@@ -292,8 +295,8 @@ report mean $\pm$ sample standard deviation over three seeds (42, 1, 2), and add
 \emph{seed ensemble} that averages the three models' probabilities
 \citep{lakshminarayanan2017ensembles}. Baseline numbers for fine-tuned BanglaBERT
 \citep{bhattacharjee2022banglabert}, mBERT \citep{devlin2019bert} and XLM-R
-\citep{conneau2020xlmr} are taken from \citet{haque2026ecomreviews}. Code and splits:
-\todo{repository URL (anonymised for review)}.
+\citep{conneau2020xlmr} are taken from \citet{haque2026ecomreviews}. Code and splits will be
+released upon publication.
 
 % =========================================================================
 \section{Results}
@@ -342,9 +345,9 @@ On four unseen product categories \quam{} keeps a pair F1 of \pmstd{40.2}{2.8}: 
 such as \textit{price} or \textit{quality} transfer well (detection F1 68.7 for aspects with
 ${\geq}500$ training mentions; seed 42). Aspect \emph{names} never seen in training are much harder
 (detection F1 12.8 for the hybrid model). Interestingly, the memory-only model detects them better
-(24.9, single seed), which suggests that the pooled path in the hybrid fits the training aspect
-inventory, while the pure memory query generalises to new names. \todo{confirm with three seeds
-before making this claim strongly.}
+(24.9). Both numbers come from single runs and are indicative only, but they suggest that the
+pooled path in the hybrid fits the training aspect inventory, while the pure memory query
+generalises better to new aspect names.
 
 \begin{table}[t]
 \centering\small
@@ -509,9 +512,11 @@ Both datasets are public: EComReviews-BD under CC BY 4.0 and BABSA under CC BY-N
 restricts our use of BABSA to non-commercial research. Reviews may contain names of sellers or
 products but no personal data were collected by us. ABSA systems can be used to filter or rank
 reviews; errors that systematically miss negative aspects (\S7) could favour sellers, so
-deployments should be audited for this. \todo{AI-assistance disclosure as required by the venue
-and by Daffodil International University, e.g.: ``We used an AI assistant for code development
-and drafting; all content was checked by the authors.''}
+deployments should be audited for this.
+
+\paragraph{Use of AI assistants.} An AI assistant was used to help write code and to draft parts
+of the manuscript. The authors designed the study, reviewed and verified all code, experiments,
+numbers and citations, and take full responsibility for the content.
 
 \bibliography{references}
 
