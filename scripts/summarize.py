@@ -1,5 +1,7 @@
 """Collect runs/*/metrics.json into reports/results.md."""
 import json
+import re
+import statistics
 import sys
 from pathlib import Path
 
@@ -34,6 +36,24 @@ def main():
                          f"{'' if not c['no_domain'] else ', no-domain'}{'' if not c['cons_weight'] else ', cons'} | "
                          f"{pct(e['pair_P'])} | {pct(e['pair_R'])} | **{pct(e['pair_F1'])}** | {pct(e['det_F1'])} | "
                          f"{pct(e['det_macroF1'])} | {pct(e['sent_acc_on_gold'])} | {pct(e['overall_macroF1'])} | {m['best_epoch']} |")
+    # seed groups: "<name>" (seed 42) + "<name>_s<seed>"
+    groups = {}
+    for k, (m, c) in eco.items():
+        base = re.sub(r"_s\d+$", "", k)
+        groups.setdefault(base, []).append(m["test"]["eco"])
+    multi = {b: g for b, g in groups.items() if len(g) > 1}
+    if multi:
+        keys = [("pair_F1", "pair F1"), ("det_F1", "det F1"), ("det_macroF1", "det macro-F1"),
+                ("sent_acc_on_gold", "sent acc"), ("overall_macroF1", "overall F1")]
+        lines += [f"\n## Seed averages (mean ± std over seeds)\n",
+                  "| run | seeds | " + " | ".join(n for _, n in keys) + " |",
+                  "|---|---|" + "---|" * len(keys)]
+        for b, g in multi.items():
+            cells = []
+            for key, _ in keys:
+                v = [100 * e[key] for e in g]
+                cells.append(f"{statistics.mean(v):.1f} ± {statistics.stdev(v):.1f}")
+            lines.append(f"| {b} | {len(g)} | " + " | ".join(cells) + " |")
     bab = {k: v for k, v in runs.items() if "babsa" in v[0]["test"]}
     if bab:
         lines += ["\n## BABSA (grouped split)\n",

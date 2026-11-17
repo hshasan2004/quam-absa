@@ -31,6 +31,14 @@ RUNS = [
     ("eco_zeroshot_mm",       ["--data", "eco", "--eco-split", "zeroshot", *FULL]),
     ("babsa_mm",              ["--data", "babsa", *FULL]),
 ]
+# Extra seeds (seed 42 is the run above) for the comparisons the paper depends on.
+# summarize.py groups "<name>_s<seed>" with "<name>" and reports mean ± std.
+SEEDED = {"eco_grouped_mm": G,
+          "abl_meanpool": [*G, "--readout", "meanpool", "--presence-mode", "value"],
+          "abl_pres_val": [*G, "--presence-mode", "value"]}
+for _seed in (1, 2):
+    for _name, _args in SEEDED.items():
+        RUNS.append((f"{_name}_s{_seed}", [*_args, "--seed", str(_seed)]))
 
 
 def main():
