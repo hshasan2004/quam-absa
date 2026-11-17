@@ -40,6 +40,17 @@ for _seed in (1, 2):
     for _name, _args in SEEDED.items():
         RUNS.append((f"{_name}_s{_seed}", [*_args, "--seed", str(_seed)]))
 
+# Final protocol: no early stopping (every run gets the full 15-epoch cosine schedule; the best
+# validation epoch is still selected). Early stopping cut off a memory-model run that was stuck
+# in a slow start (eco_grouped_mm_s2: 28.8 vs 49.3 for seed 1).
+FINAL = {"fin_memory": G,
+         "fin_meanpool": [*G, "--readout", "meanpool", "--presence-mode", "value"],
+         "fin_pres_val": [*G, "--presence-mode", "value"]}
+for _seed in (42, 1, 2):
+    for _name, _args in FINAL.items():
+        RUNS.append((_name if _seed == 42 else f"{_name}_s{_seed}",
+                     [*_args, "--patience", "99", "--seed", str(_seed)]))
+
 
 def main():
     only = set(sys.argv[1:])
