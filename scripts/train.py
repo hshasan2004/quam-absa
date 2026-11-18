@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 from quam.data import (OVERALL_QUERY, SCRIPTS, ABSADataset, EncoderCache, LengthBucketSampler,  # noqa: E402
                        collate, default_cache_dir, load_records)
 from quam.metrics import Collector, babsa_metrics, best_eco_threshold, eco_metrics, per_group  # noqa: E402
-from quam.model import PRESENCE_MODES, QUERY_INITS, READOUTS, QuAM  # noqa: E402
+from quam.model import DIRECT_MODES, PRESENCE_MODES, QUERY_INITS, READOUTS, QuAM  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
@@ -44,6 +44,9 @@ def parse():
     ap.add_argument("--dropout", type=float, default=0.1)
     ap.add_argument("--presence-mode", choices=PRESENCE_MODES, default="mag+value")
     ap.add_argument("--readout", choices=READOUTS, default="memory")
+    ap.add_argument("--direct", choices=DIRECT_MODES, default="off")
+    ap.add_argument("--id-drop", type=float, default=0.2)
+    ap.add_argument("--direct-raw", action="store_true", help="direct path on raw (not z-scored) encoder states")
     ap.add_argument("--no-domain", action="store_true")
     ap.add_argument("--query-init", choices=QUERY_INITS, default="free",
                     help="tied: aspect query starts as the memory's own key for the aspect name")
@@ -118,6 +121,11 @@ def score(a, rv, data, threshold=None):
     return m
 
 
+def eco_vocab():
+    """Fixed aspect-id vocabulary for the direct path: the 74 EComReviews-BD aspect names, sorted."""
+    return sorted({a["query"] for r in load_records(("eco",)) for a in r["aspects"]})
+
+
 def make_loader(ds, bs, shuffle, seed):
     lengths = [it["text"].__len__() for it in ds.items]
     return torch.utils.data.DataLoader(ds, batch_sampler=LengthBucketSampler(lengths, bs, shuffle, seed),
@@ -163,7 +171,9 @@ def main():
 
     model = QuAM(cache.dim, cache.query(OVERALL_QUERY), cache.stats, d_model=args.d_model, heads=args.heads,
                  layout=args.layout, dropout=args.dropout, presence_mode=args.presence_mode,
-                 use_domain=not args.no_domain, readout=args.readout, query_init=args.query_init).to(dev)
+                 use_domain=not args.no_domain, readout=args.readout, query_init=args.query_init,
+                 direct=args.direct, aspect_vocab=eco_vocab() if args.direct != "off" else (),
+                 id_drop=args.id_drop, direct_raw=args.direct_raw).to(dev)
     n_params = sum(p.numel() for p in model.parameters())
     log(f"QuAM params: {n_params / 1e6:.2f}M  layout={args.layout} d={args.d_model} heads={args.heads}")
 

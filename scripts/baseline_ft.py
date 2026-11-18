@@ -54,18 +54,22 @@ def parse():
     ap.add_argument("--freeze-embeddings", action="store_true")
     ap.add_argument("--grad-ckpt", action="store_true", help="gradient checkpointing (saves GPU memory)")
     ap.add_argument("--freeze-encoder", action="store_true", help="frozen encoder + trained MLP head")
+    ap.add_argument("--no-pair", action="store_true", help="encode the review alone (no category sentence)")
     ap.add_argument("--limit", type=int, default=0, help="debug: use only the first N reviews per part")
     ap.add_argument("--seed", type=int, default=42)
     return ap.parse_args()
 
 
 class EcoText(torch.utils.data.Dataset):
-    def __init__(self, recs, part, split, tok, aspect_ix, max_len, limit=0):
+    def __init__(self, recs, part, split, tok, aspect_ix, max_len, limit=0, no_pair=False):
         self.items = [r for r in recs if r["text"] and r["splits"][split] == part]
         if limit:
             self.items = self.items[:limit]
-        self.enc = tok([domain_query(r["domain"]) for r in self.items], [r["text"] for r in self.items],
-                       truncation="only_second", max_length=max_len)["input_ids"]
+        if no_pair:
+            self.enc = tok([r["text"] for r in self.items], truncation=True, max_length=max_len)["input_ids"]
+        else:
+            self.enc = tok([domain_query(r["domain"]) for r in self.items], [r["text"] for r in self.items],
+                           truncation="only_second", max_length=max_len)["input_ids"]
         self.aspect_ix = aspect_ix
 
     def __len__(self):
@@ -186,7 +190,7 @@ def main():
     names = sorted({a["query"] for r in recs for a in r["aspects"]})
     aspect_ix = {n: i for i, n in enumerate(names)}
     tok = AutoTokenizer.from_pretrained(args.model)
-    ds = {p: EcoText(recs, p, args.eco_split, tok, aspect_ix, args.max_len, args.limit) for p in ("train", "val", "test")}
+    ds = {p: EcoText(recs, p, args.eco_split, tok, aspect_ix, args.max_len, args.limit, args.no_pair) for p in ("train", "val", "test")}
     log(f"{args.model} | split={args.eco_split} train={len(ds['train'])} val={len(ds['val'])} test={len(ds['test'])} aspects={len(names)}")
 
     col = lambda b: collate(b, tok.pad_token_id)

@@ -30,7 +30,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from quam.data import OVERALL_QUERY, SCRIPTS, SENT_NAMES, ABSADataset, EncoderCache, load_records  # noqa: E402
 from quam.metrics import babsa_metrics, eco_metrics, per_aspect_thresholds, prf  # noqa: E402
 from quam.model import QuAM  # noqa: E402
-from train import make_loader, to_dev  # noqa: E402
+from train import eco_vocab, make_loader, to_dev  # noqa: E402
 
 plt.rcParams.update({"font.size": 10, "figure.dpi": 150, "savefig.bbox": "tight"})
 
@@ -41,6 +41,18 @@ def load_run(name):
     cfg = json.loads((run / "config.json").read_text(encoding="utf-8"))
     met = json.loads((run / "metrics.json").read_text(encoding="utf-8"))
     return run, cfg, met
+
+
+_CACHES = {}
+
+
+def cache_for(cfg):
+    """The encoder cache a run was trained with (memoised; the paired cache differs from the default)."""
+    from quam.data import default_cache_dir
+    p = cfg.get("cache") or str(default_cache_dir())
+    if p not in _CACHES:
+        _CACHES[p] = EncoderCache(p)
+    return _CACHES[p]
 
 
 def build(cfg, cache, recs, eval_seed=None):
@@ -55,7 +67,9 @@ def build(cfg, cache, recs, eval_seed=None):
     model = QuAM(cache.dim, cache.query(OVERALL_QUERY), cache.stats, d_model=cfg["d_model"], heads=cfg["heads"],
                  layout=cfg["layout"], dropout=cfg["dropout"], presence_mode=cfg["presence_mode"],
                  use_domain=not cfg["no_domain"], readout=cfg["readout"],
-                 query_init=cfg.get("query_init", "free"))
+                 query_init=cfg.get("query_init", "free"), direct=cfg.get("direct", "off"),
+                 aspect_vocab=eco_vocab() if cfg.get("direct", "off") != "off" else (),
+                 id_drop=cfg.get("id_drop", 0.2), direct_raw=cfg.get("direct_raw", False))
     return test_ds, val_ds, model
 
 
@@ -374,9 +388,7 @@ def main():
     cache = None
     for name in args.runs:
         run, cfg, met = load_run(name)
-        if cache is None:
-            from quam.data import default_cache_dir
-            cache = EncoderCache(cfg.get("cache") or default_cache_dir())
+        cache = cache_for(cfg)
         which = {"eco": ("eco",), "babsa": ("babsa",), "both": ("eco", "babsa")}[cfg["data"]]
         recs = load_records(which)
         texts = {r["id"]: r["text"] for r in recs}

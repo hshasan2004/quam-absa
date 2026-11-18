@@ -14,6 +14,7 @@ OVERALL_QUERY = "overall opinion"
 SCRIPTS = ["bangla", "english", "banglish", "mixed", "other"]
 SENT = {"positive": 0, "neutral": 1, "negative": 2}
 SENT_NAMES = ["positive", "neutral", "negative"]
+PAIR_SEP = "\x1f"          # key separator in a category-paired encoder cache
 
 
 def domain_query(domain: str) -> str:
@@ -46,7 +47,13 @@ class EncoderCache:
         q = torch.load(path / "queries.pt")
         self.query_id = {s: i for i, s in enumerate(q["strings"])}
         self.query_emb = q["emb"].float()
+        meta = path / "meta.json"
+        self.paired = meta.exists() and json.loads(meta.read_text(encoding="utf-8")).get("paired", False)
         self.stats = self._feature_stats(path)
+
+    def review(self, r) -> torch.Tensor:
+        """Token states of record r's review (encoded with its category if the cache is paired)."""
+        return self.text(domain_query(r["domain"]) + PAIR_SEP + r["text"] if self.paired else r["text"])
 
     def _feature_stats(self, path, n_sample=200_000, seed=0):
         """Per-feature mean/std of token states and of query vectors.
@@ -129,7 +136,7 @@ class ABSADataset(torch.utils.data.Dataset):
         en = r.get("text_en") if self.use_en else None
         return {
             "id": r["id"], "dataset": r["dataset"], "domain": r["domain"],
-            "x": self.cache.text(r["text"]),
+            "x": self.cache.review(r),
             "x_en": self.cache.text(en) if en else None,
             "dom_q": self.cache.query(domain_query(r["domain"])),
             "script": SCRIPTS.index(r["script"]),

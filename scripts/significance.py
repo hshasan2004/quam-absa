@@ -21,8 +21,8 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
-from analyze import build, collect, load_run  # noqa: E402
-from quam.data import EncoderCache, default_cache_dir, load_records  # noqa: E402
+from analyze import build, cache_for, collect, load_run  # noqa: E402
+from quam.data import load_records  # noqa: E402
 from train import make_loader  # noqa: E402
 
 
@@ -47,12 +47,11 @@ def f1(c):
 
 
 def ours_preds(names, dev="cuda"):
-    cache = EncoderCache(default_cache_dir())
     out = []
     for n in names:
         run, cfg, met = load_run(n)
         recs = load_records(("eco",))
-        test_ds, _, model = build(cfg, cache, recs)
+        test_ds, _, model = build(cfg, cache_for(cfg), recs)
         model.load_state_dict(torch.load(run / "best.pt", map_location="cpu"))
         A, _, _ = collect(model.to(dev), make_loader(test_ds, 64, False, 0), dev)
         out.append((A, met["test"]["eco"]["threshold"]))

@@ -22,17 +22,21 @@ from transformers import AutoModel, AutoTokenizer
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from quam.data import OVERALL_QUERY, domain_query, load_records  # noqa: E402
+from quam.data import OVERALL_QUERY, PAIR_SEP, domain_query, load_records  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8")
 
 
-def collect(records):
+def collect(records, pair=False):
     texts, queries = {}, {OVERALL_QUERY: None}
     for r in records:
-        texts.setdefault(r["text"], None)
-        if r.get("text_en"):
-            texts.setdefault(r["text_en"], None)
+        if pair:      # key "<category><SEP><review>": the review is encoded together with its category
+            if r["text"]:
+                texts.setdefault(domain_query(r["domain"]) + PAIR_SEP + r["text"], None)
+        else:
+            texts.setdefault(r["text"], None)
+            if r.get("text_en"):
+                texts.setdefault(r["text_en"], None)
         queries.setdefault(domain_query(r["domain"]), None)
         for a in r["aspects"]:
             queries.setdefault(a["query"], None)
@@ -41,9 +45,14 @@ def collect(records):
 
 @torch.no_grad()
 def encode_texts(model, tok, texts, out_dir, max_len, batch_tokens, device):
-    ids = [tok(t, truncation=False, add_special_tokens=True)["input_ids"] for t in texts]
-    full = np.array([len(x) for x in ids])
-    ids = [x if len(x) <= max_len else x[: max_len - 1] + [tok.sep_token_id] for x in ids]
+    if PAIR_SEP in texts[0]:      # paired cache: "<s> category </s></s> review </s>", review truncated
+        parts = [t.split(PAIR_SEP, 1) for t in texts]
+        full = np.array([len(tok(c, t)["input_ids"]) for c, t in parts])
+        ids = [tok(c, t, truncation="only_second", max_length=max_len)["input_ids"] for c, t in parts]
+    else:
+        ids = [tok(t, truncation=False, add_special_tokens=True)["input_ids"] for t in texts]
+        full = np.array([len(x) for x in ids])
+        ids = [x if len(x) <= max_len else x[: max_len - 1] + [tok.sep_token_id] for x in ids]
     lengths = np.array([len(x) for x in ids])
     offsets = np.concatenate([[0], np.cumsum(lengths)[:-1]])
     dim = model.config.hidden_size
@@ -98,12 +107,14 @@ def main():
     ap.add_argument("--max-len", type=int, default=256)
     ap.add_argument("--batch-tokens", type=int, default=8192)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--pair", action="store_true", help="encode each review together with its category name")
     args = ap.parse_args()
-    out = Path(args.out) if args.out else Path.home() / ".cache" / "quam-absa" / args.model.split("/")[-1]
+    out = Path(args.out) if args.out else (Path.home() / ".cache" / "quam-absa" /
+                                           (args.model.split("/")[-1] + ("-paired" if args.pair else "")))
     out.mkdir(parents=True, exist_ok=True)
 
     records = load_records()
-    texts, queries = collect(records)
+    texts, queries = collect(records, args.pair)
     print(f"{len(texts)} unique texts, {len(queries)} unique queries -> {out}")
     device = "cuda"
     tok = AutoTokenizer.from_pretrained(args.model)
@@ -112,7 +123,7 @@ def main():
     full = encode_texts(model, tok, texts, out, args.max_len, args.batch_tokens, device)
     q = encode_queries(model, tok, queries, device)
     torch.save({"strings": queries, "emb": q}, out / "queries.pt")
-    meta = {"model": args.model, "max_len": args.max_len, "n_texts": len(texts),
+    meta = {"model": args.model, "paired": args.pair, "max_len": args.max_len, "n_texts": len(texts),
             "n_tokens": int(np.minimum(full, args.max_len).sum()),
             "truncated_texts": int((full > args.max_len).sum()),
             "token_len_p50_p95_p99_max": [int(np.percentile(full, p)) for p in (50, 95, 99)] + [int(full.max())]}

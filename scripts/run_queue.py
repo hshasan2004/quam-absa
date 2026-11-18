@@ -61,6 +61,20 @@ for _seed in (42, 1, 2):
         RUNS.append((_name if _seed == 42 else f"{_name}_s{_seed}",
                      [*_args, "--patience", "99", "--seed", str(_seed)]))
 
+# QuAM v2 (after the strong frozen-encoder baseline): reviews encoded together with their category
+# (paired cache), plus a direct path on the raw [<s>; mean] encoder states scored per aspect
+# (learned row for known aspects + aspect-name MLP). q2only_* = direct path without the memory.
+PAIRED = str(Path.home() / ".cache" / "quam-absa" / "xlm-roberta-base-paired")
+V2 = [*FULL, "--readout", "hybrid", "--direct-raw", "--cache", PAIRED]
+SPLIT = {"official": ["--data", "eco", "--eco-split", "official"], "grouped": ["--data", "eco", "--eco-split", "grouped"],
+         "zeroshot": ["--data", "eco", "--eco-split", "zeroshot"], "babsa": ["--data", "babsa"]}
+Q2 = {f"q2_{s}": [*SPLIT[s], *V2, "--direct", "add"] for s in ("grouped", "official", "zeroshot", "babsa")}
+Q2.update({f"q2only_{s}": [*SPLIT[s], *V2, "--direct", "only"] for s in ("grouped", "zeroshot")})
+for _seed in (42, 1, 2):
+    for _name, _args in Q2.items():
+        RUNS.append((_name if _seed == 42 else f"{_name}_s{_seed}",
+                     [*_args, "--patience", "99", "--seed", str(_seed)]))
+
 
 def main():
     only = set(sys.argv[1:])

@@ -18,8 +18,8 @@ import torch
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts"))
-from analyze import build, collect, load_run  # noqa: E402
-from quam.data import EncoderCache, default_cache_dir, load_records  # noqa: E402
+from analyze import build, cache_for, collect, load_run  # noqa: E402
+from quam.data import load_records  # noqa: E402
 from quam.metrics import babsa_metrics, best_eco_threshold, eco_metrics  # noqa: E402
 from train import make_loader  # noqa: E402
 
@@ -43,7 +43,6 @@ def main():
     ap.add_argument("--name", required=True)
     ap.add_argument("runs", nargs="+")
     args = ap.parse_args()
-    cache = EncoderCache(default_cache_dir())
     val_parts, test_parts, cfg0 = [], [], None
     for name in args.runs:
         run, cfg, _ = load_run(name)
@@ -52,7 +51,7 @@ def main():
         assert (cfg["data"], cfg["eco_split"]) == (cfg0["data"], cfg0["eco_split"]), "runs use different data"
         which = {"eco": ("eco",), "babsa": ("babsa",), "both": ("eco", "babsa")}[cfg["data"]]
         recs = load_records(which)
-        test_ds, val_ds, model = build(cfg, cache, recs, eval_seed=42)
+        test_ds, val_ds, model = build(cfg, cache_for(cfg), recs, eval_seed=42)
         model.load_state_dict(torch.load(run / "best.pt", map_location="cpu"))
         model.to("cuda")
         Av, Rv, _ = collect(model, make_loader(val_ds, 64, False, 0), "cuda")

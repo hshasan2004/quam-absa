@@ -20,6 +20,30 @@ QUERY_INITS = ("free", "tied")
 # meanpool: everything from mean-pooled tokens + aspect query (AF-MAT style ablation)
 # hybrid:   presence from memory read + pooled tokens; sentiment and overall from the memory read
 READOUTS = ("memory", "meanpool", "hybrid")
+# direct path: g = MLP(LN([x_<s>; mean x])) of the frozen encoder states, scored with per-aspect weights
+#   score_a = E[id(a)].g + MLP([g; q_a])  (learned row for known aspects + a name-conditioned part; unseen
+#   aspects have id 0 and use the name part only).  off: not used; add: added to the memory heads' logits;
+#   only: replaces them (ablation: is the memory read useful on top of the direct path?)
+DIRECT_MODES = ("off", "add", "only")
+
+
+class AspectScorer(nn.Module):
+    """Per-aspect scorer over the direct features g, k outputs per aspect:
+    logits = E[id(a)] . g  (a learned row per known aspect, like a linear output layer)
+           + MLP([g; q_a])  (from the aspect name, so unseen aspects (id 0, row = 0) still get scores)."""
+
+    def __init__(self, n_ids, q_dim, g_dim, k, hidden=256):
+        super().__init__()
+        self.k, self.g_dim = k, g_dim
+        self.emb = nn.Embedding(n_ids + 1, g_dim * k, padding_idx=0)
+        nn.init.zeros_(self.emb.weight)                     # unseen ids stay exactly zero
+        self.name = nn.Sequential(nn.Linear(g_dim + q_dim, hidden), nn.GELU(), nn.Linear(hidden, k))
+
+    def forward(self, g, q, ids):                           # g (B, G), q (B, A, Q), ids (B, A)
+        w = self.emb(ids).view(*ids.shape, self.k, self.g_dim)
+        by_id = torch.einsum("bg,bakg->bak", g, w)
+        by_name = self.name(torch.cat([g[:, None].expand(-1, q.shape[1], -1), q], -1))
+        return by_id + by_name
 
 
 def mlp(i, h, o, dropout=0.0):
@@ -40,10 +64,19 @@ class Standardize(nn.Module):
 
 class QuAM(nn.Module):
     def __init__(self, enc_dim, overall_query, stats, d_model=256, heads=4, layout="mmsm", dropout=0.1,
-                 presence_mode="mag+value", use_domain=True, readout="memory", query_init="free"):
+                 presence_mode="mag+value", use_domain=True, readout="memory", query_init="free",
+                 direct="off", aspect_vocab=(), direct_dim=1024, id_drop=0.2, direct_raw=False):
         super().__init__()
         assert presence_mode in PRESENCE_MODES and readout in READOUTS
-        assert query_init in QUERY_INITS
+        assert query_init in QUERY_INITS and direct in DIRECT_MODES
+        self.direct, self.id_drop, self.direct_raw = direct, id_drop, direct_raw
+        if direct != "off":
+            self.aspect_vocab = {n: i + 1 for i, n in enumerate(aspect_vocab)}
+            self.g = nn.Sequential(nn.LayerNorm(2 * enc_dim), nn.Linear(2 * enc_dim, direct_dim), nn.GELU(),
+                                   nn.Dropout(dropout))
+            self.d_pres = AspectScorer(len(aspect_vocab), enc_dim, direct_dim, 1)
+            self.d_sent = AspectScorer(len(aspect_vocab), enc_dim, direct_dim, 3)
+            self.d_overall = nn.Linear(direct_dim, 3)
         self.presence_mode, self.use_domain, self.readout, self.heads = presence_mode, use_domain, readout, heads
         self.tied = query_init == "tied"
         inner = 2 * d_model                    # mLSTM up-projection factor 2
@@ -121,12 +154,30 @@ class QuAM(nn.Module):
         r_asp, r_all, mag = r[:, :-1], r[:, -1], mag[:, :-1]
 
         sent = self.sent_head(r_asp)
-        no_neu = ~batch["allow_neutral"].to(sent.device)
-        sent = sent.masked_fill(no_neu[:, None, None] & (torch.arange(3, device=sent.device) == 1), -1e4)
         pres_in = {"mag+value": torch.cat([mag, r_asp], -1), "mag": mag, "value": r_asp}[self.presence_mode]
         if rp is not None:
             pres_in = torch.cat([pres_in, rp[:, :-1]], -1)
         pres = self.pres_head(pres_in).squeeze(-1)
+        d_overall = 0.0
+        if self.direct != "off":
+            xs, m0 = (x.float() if self.direct_raw else self.tok_std(x)), batch["mask"].float()[..., None]
+            g = self.g(torch.cat([xs[:, 0], (xs * m0).sum(1) / m0.sum(1).clamp(min=1)], -1))
+            A0 = aq.shape[1]
+            ids = torch.zeros(B, A0, dtype=torch.long)
+            for i, names in enumerate(batch["aspect_names"]):
+                ids[i, :len(names)] = torch.tensor([self.aspect_vocab.get(n, 0) for n in names], dtype=torch.long)
+            ids = ids.to(x.device)
+            if self.training and self.id_drop > 0:    # keep the name-generated weights useful (zero-shot)
+                ids = ids.masked_fill(torch.rand(ids.shape, device=ids.device) < self.id_drop, 0)
+            qs = self.q_std(aq)
+            dp, ds = self.d_pres(g, qs, ids).squeeze(-1), self.d_sent(g, qs, ids)
+            if self.direct == "only":
+                pres, sent = dp, ds
+            else:
+                pres, sent = pres + dp, sent + ds
+            d_overall = self.d_overall(g)
+        no_neu = ~batch["allow_neutral"].to(sent.device)
+        sent = sent.masked_fill(no_neu[:, None, None] & (torch.arange(3, device=sent.device) == 1), -1e4)
 
         # overall = learned aggregation of aspect sentiments + direct "overall opinion" read
         A = aq.shape[1]
@@ -136,5 +187,5 @@ class QuAM(nn.Module):
         w = imp * torch.sigmoid(pres) * a_mask
         P = sent.softmax(-1)
         feats = torch.stack([(w * P[..., 0]).sum(1), (w * P[..., 2]).sum(1), (w * P[..., 1]).sum(1), w.sum(1)], -1)
-        overall = self.agg(feats) + self.overall_head(r_all)
+        overall = self.agg(feats) + (self.overall_head(r_all) if self.direct != "only" else 0.0) + d_overall
         return {"presence": pres, "sentiment": sent, "overall": overall, "importance": imp}
