@@ -52,6 +52,8 @@ def parse():
     ap.add_argument("--max-len", type=int, default=256)
     ap.add_argument("--overall-weight", type=float, default=0.5)
     ap.add_argument("--freeze-embeddings", action="store_true")
+    ap.add_argument("--grad-ckpt", action="store_true", help="gradient checkpointing (saves GPU memory)")
+    ap.add_argument("--freeze-encoder", action="store_true", help="frozen encoder + trained MLP head")
     ap.add_argument("--limit", type=int, default=0, help="debug: use only the first N reviews per part")
     ap.add_argument("--seed", type=int, default=42)
     return ap.parse_args()
@@ -97,20 +99,40 @@ def collate(batch, pad_id):
 
 
 class Baseline(nn.Module):
-    def __init__(self, name, n_aspects, freeze_emb):
+    def __init__(self, name, n_aspects, freeze_emb, grad_ckpt=False, freeze_enc=False, head_dim=1024):
         super().__init__()
         self.enc = AutoModel.from_pretrained(name)
+        if grad_ckpt:          # memory only: recompute activations in backward; results are unchanged
+            self.enc.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
         if freeze_emb:
             self.enc.get_input_embeddings().weight.requires_grad_(False)
+        self.freeze_enc = freeze_enc
         h = self.enc.config.hidden_size
+        if freeze_enc:         # frozen encoder + trained MLP head on LN([CLS; mean]) (same budget class as QuAM)
+            self.enc.requires_grad_(False)
+            self.mlp = nn.Sequential(nn.LayerNorm(2 * h), nn.Linear(2 * h, head_dim), nn.GELU(), nn.Dropout(0.1))
+            h = head_dim
         self.drop = nn.Dropout(0.1)
         self.pres = nn.Linear(h, n_aspects)
         self.pol = nn.Linear(h, n_aspects * 2)       # (pos, neg) per aspect
         self.overall = nn.Linear(h, 3)
         self.n = n_aspects
 
+    def train(self, mode=True):
+        super().train(mode)
+        if self.freeze_enc:
+            self.enc.eval()
+        return self
+
     def forward(self, ids, att, aix):
-        cls = self.drop(self.enc(input_ids=ids, attention_mask=att).last_hidden_state[:, 0])
+        if self.freeze_enc:
+            with torch.no_grad():
+                hs = self.enc(input_ids=ids, attention_mask=att).last_hidden_state.float()
+                m = att[..., None].float()
+                feat = torch.cat([hs[:, 0], (hs * m).sum(1) / m.sum(1).clamp(min=1)], -1)
+            cls = self.drop(self.mlp(feat))
+        else:
+            cls = self.drop(self.enc(input_ids=ids, attention_mask=att).last_hidden_state[:, 0])
         pres = self.pres(cls).gather(1, aix)                                  # (B, A)
         pol = self.pol(cls).view(-1, self.n, 2)
         pol = pol.gather(1, aix[..., None].expand(-1, -1, 2))                 # (B, A, 2)
@@ -173,7 +195,7 @@ def main():
     train_dl = mk(ds["train"], args.bs, True, args.seed)
     val_dl, test_dl = mk(ds["val"], 64, False, 0), mk(ds["test"], 64, False, 0)
 
-    model = Baseline(args.model, len(names), args.freeze_embeddings).to(dev)
+    model = Baseline(args.model, len(names), args.freeze_embeddings, args.grad_ckpt, args.freeze_encoder).to(dev)
     trainable = [p for p in model.parameters() if p.requires_grad]
     log(f"params {sum(p.numel() for p in model.parameters()) / 1e6:.1f}M, trainable {sum(p.numel() for p in trainable) / 1e6:.1f}M")
     decay = [p for n, p in model.named_parameters() if p.requires_grad and p.dim() > 1]

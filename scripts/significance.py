@@ -46,7 +46,7 @@ def f1(c):
     return np.where(p + r > 0, 2 * p * r / np.maximum(p + r, 1e-12), 0.0)
 
 
-def ours_preds(names):
+def ours_preds(names, dev="cuda"):
     cache = EncoderCache(default_cache_dir())
     out = []
     for n in names:
@@ -54,7 +54,7 @@ def ours_preds(names):
         recs = load_records(("eco",))
         test_ds, _, model = build(cfg, cache, recs)
         model.load_state_dict(torch.load(run / "best.pt", map_location="cpu"))
-        A, _, _ = collect(model.to("cuda"), make_loader(test_ds, 64, False, 0), "cuda")
+        A, _, _ = collect(model.to(dev), make_loader(test_ds, 64, False, 0), dev)
         out.append((A, met["test"]["eco"]["threshold"]))
         del model; torch.cuda.empty_cache()
     return out
@@ -76,9 +76,10 @@ def main():
     ap.add_argument("--base", nargs="+", required=True)
     ap.add_argument("--n", type=int, default=10000)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--device", default="cuda")
     args = ap.parse_args()
 
-    O, B = ours_preds(args.ours), base_preds(args.base)
+    O, B = ours_preds(args.ours, args.device), base_preds(args.base)
     ids = sorted(set(O[0][0]["id"]))
     for A, _ in O + B:                                       # same test reviews and aspect rows
         assert sorted(set(A["id"])) == ids, "systems were evaluated on different test reviews"

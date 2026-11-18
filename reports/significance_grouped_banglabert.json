@@ -1,0 +1,33 @@
+{
+ "split": "grouped_banglabert",
+ "ours": [
+  "fin_hybrid",
+  "fin_hybrid_s1",
+  "fin_hybrid_s2"
+ ],
+ "baseline": [
+  "bl_banglabert_grouped",
+  "bl_banglabert_grouped_s1",
+  "bl_banglabert_grouped_s2"
+ ],
+ "n_reviews": 3103,
+ "ours_pairF1": 47.20992030448359,
+ "baseline_pairF1": 57.95341571623134,
+ "diff": -10.74349541174775,
+ "diff_95CI": [
+  -11.748765717434944,
+  -9.721389490243059
+ ],
+ "p_value": 1.0,
+ "bootstrap_samples": 10000,
+ "per_seed_ours": [
+  44.9712643678161,
+  49.5038113044729,
+  47.15468524116178
+ ],
+ "per_seed_base": [
+  58.01549028204004,
+  57.37029920395278,
+  58.474457662701184
+ ]
+}

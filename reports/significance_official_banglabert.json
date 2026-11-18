@@ -1,0 +1,33 @@
+{
+ "split": "official_banglabert",
+ "ours": [
+  "hyb_official",
+  "hyb_official_s1",
+  "hyb_official_s2"
+ ],
+ "baseline": [
+  "bl_banglabert_official",
+  "bl_banglabert_official_s1",
+  "bl_banglabert_official_s2"
+ ],
+ "n_reviews": 3103,
+ "ours_pairF1": 49.297399090740264,
+ "baseline_pairF1": 57.86159679355814,
+ "diff": -8.564197702817882,
+ "diff_95CI": [
+  -9.555323897670691,
+  -7.602821134706102
+ ],
+ "p_value": 1.0,
+ "bootstrap_samples": 10000,
+ "per_seed_ours": [
+  45.567206863679694,
+  51.44906743185079,
+  50.875922976690305
+ ],
+ "per_seed_base": [
+  58.17867932671559,
+  57.80146952888633,
+  57.60464152507253
+ ]
+}
