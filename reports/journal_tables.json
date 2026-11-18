@@ -1,0 +1,201 @@
+{
+ "stats": {
+  "eco_script": {
+   "banglish": 2466,
+   "english": 9298,
+   "bangla": 7643,
+   "mixed": 1237,
+   "other": 41
+  },
+  "babsa_script": {
+   "bangla": 13882,
+   "mixed": 124,
+   "other": 2,
+   "banglish": 60,
+   "english": 31
+  },
+  "eco_category": {
+   "PowerBank": 692,
+   "CellPhone": 967,
+   "HDMI_Cable": 245,
+   "Microphone": 921,
+   "ChargingCable": 1596,
+   "ChargingAdapter": 2346,
+   "SmartPhone": 150,
+   "WebCam": 124,
+   "SmartWatch": 396,
+   "Mouse": 1944,
+   "Router": 1510,
+   "Pendrive": 418,
+   "MemoryCards": 142,
+   "Keyboard": 1515,
+   "Earbuds": 3296,
+   "Earphones": 2581,
+   "Mini_Printer": 449,
+   "CC_Camera": 554,
+   "Speaker": 839
+  },
+  "babsa_domain": {
+   "Politics / Social Issue": 2752,
+   "Religious / Spiritual Content": 991,
+   "Food Review": 343,
+   "Book Review": 4320,
+   "General Comment": 1894,
+   "Personal Opinion": 984,
+   "Culture / History": 829,
+   "Customer Service": 129,
+   "Finance / Business": 372,
+   "Health / Fitness": 141,
+   "Entertainment": 255,
+   "Technology": 112,
+   "Education": 362,
+   "Travel": 267,
+   "Sports": 216,
+   "Music Review": 35,
+   "Product Review": 67,
+   "Lifestyle": 10,
+   "Gaming": 3,
+   "Agriculture": 6,
+   "News": 11
+  },
+  "eco_overall": {
+   "positive": 13150,
+   "neutral": 4544,
+   "negative": 2991
+  },
+  "eco_aspect_labels": {
+   "none": 243021,
+   "positive": 18513,
+   "negative": 6414
+  },
+  "babsa_aspect_labels": {
+   "neutral": 5858,
+   "positive": 5479,
+   "negative": 5631
+  },
+  "eco_words_median": 8,
+  "babsa_words_median": 14
+ },
+ "official_by_group": {
+  "quam": {
+   "n_seeds": 3,
+   "script": {
+    "english": 61.8047437204718,
+    "bangla": 55.713341741431805,
+    "banglish": 52.987852558841844,
+    "mixed": 56.33820126748476
+   },
+   "category": {
+    "CC_Camera": 42.5188100052832,
+    "CellPhone": 73.52611282833236,
+    "ChargingAdapter": 47.57023508846037,
+    "ChargingCable": 52.52559868232359,
+    "Earbuds": 57.40477966384556,
+    "Earphones": 62.348146818895806,
+    "HDMI_Cable": 73.43947022447925,
+    "Keyboard": 61.3192263358819,
+    "MemoryCards": 52.03703703703704,
+    "Microphone": 59.47370298851114,
+    "Mini_Printer": 47.30358807407098,
+    "Mouse": 58.54795586485527,
+    "Pendrive": 53.50484162491667,
+    "PowerBank": 45.89539250973192,
+    "Router": 52.88862029975136,
+    "SmartPhone": 70.92092092092092,
+    "SmartWatch": 41.58024691358025,
+    "Speaker": 63.5843950483106,
+    "WebCam": 68.55500821018063
+   }
+  },
+  "banglabert_ft": {
+   "n_seeds": 3,
+   "script": {
+    "english": 60.041788098318314,
+    "bangla": 56.42535692582986,
+    "banglish": 55.943576890945316,
+    "mixed": 56.79084581040117
+   },
+   "category": {
+    "CC_Camera": 34.40041582584235,
+    "CellPhone": 77.9084780427397,
+    "ChargingAdapter": 55.0120668544406,
+    "ChargingCable": 52.0669706476961,
+    "Earbuds": 54.62955543827702,
+    "Earphones": 63.79990959759496,
+    "HDMI_Cable": 76.34706074613625,
+    "Keyboard": 58.24840521513711,
+    "MemoryCards": 49.51249951249952,
+    "Microphone": 61.69225938287799,
+    "Mini_Printer": 36.07451324842629,
+    "Mouse": 56.9566096571982,
+    "Pendrive": 46.366688325752655,
+    "PowerBank": 46.383985318753105,
+    "Router": 51.16482906096365,
+    "SmartPhone": 66.0502607871029,
+    "SmartWatch": 37.96472528866895,
+    "Speaker": 60.295712480220246,
+    "WebCam": 72.96412399860675
+   }
+  },
+  "xlmr_frozen": {
+   "n_seeds": 3,
+   "script": {
+    "english": 61.92445797492891,
+    "bangla": 56.303716139643306,
+    "banglish": 53.97608512962809,
+    "mixed": 57.71127164316019
+   },
+   "category": {
+    "CC_Camera": 47.7295725002147,
+    "CellPhone": 72.00406463615778,
+    "ChargingAdapter": 50.864823138242755,
+    "ChargingCable": 56.499947759360275,
+    "Earbuds": 58.294575862590015,
+    "Earphones": 62.53262858602107,
+    "HDMI_Cable": 72.39024390243902,
+    "Keyboard": 60.69635805440338,
+    "MemoryCards": 50.68493150684932,
+    "Microphone": 58.2856949165674,
+    "Mini_Printer": 48.50457124378987,
+    "Mouse": 58.563818796456275,
+    "Pendrive": 53.47579265368068,
+    "PowerBank": 45.77690596782821,
+    "Router": 51.5014536291132,
+    "SmartPhone": 79.58376332989336,
+    "SmartWatch": 42.180279206870665,
+    "Speaker": 64.32643480442222,
+    "WebCam": 68.92070913695694
+   }
+  },
+  "xlmr_ft": {
+   "n_seeds": 1,
+   "script": {
+    "english": 64.50034940600979,
+    "bangla": 59.77093772369363,
+    "banglish": 60.205580029368576,
+    "mixed": 63.17460317460318
+   },
+   "category": {
+    "CC_Camera": 34.5679012345679,
+    "CellPhone": 81.97674418604652,
+    "ChargingAdapter": 55.37757437070938,
+    "ChargingCable": 55.8891454965358,
+    "Earbuds": 63.134160090191656,
+    "Earphones": 67.84810126582279,
+    "HDMI_Cable": 79.66101694915254,
+    "Keyboard": 63.05418719211823,
+    "MemoryCards": 54.54545454545455,
+    "Microphone": 64.78873239436619,
+    "Mini_Printer": 31.884057971014492,
+    "Mouse": 59.857482185273156,
+    "Pendrive": 46.753246753246756,
+    "PowerBank": 52.84974093264249,
+    "Router": 56.75146771037182,
+    "SmartPhone": 72.22222222222223,
+    "SmartWatch": 46.15384615384615,
+    "Speaker": 62.0253164556962,
+    "WebCam": 77.19298245614036
+   }
+  }
+ }
+}

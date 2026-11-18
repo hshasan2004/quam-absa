@@ -1,0 +1,107 @@
+{
+ "q2_zeroshot": {
+  "n_seeds": 3,
+  "seen_det_F1": {
+   "mean": 62.245787160789675,
+   "std": 0.091094993180087
+  },
+  "seen_pair_F1": {
+   "mean": 55.230191250389574,
+   "std": 0.9131218911458711
+  },
+  "seen_n_gold": 1794,
+  "unseen_det_F1": {
+   "mean": 20.05280114108166,
+   "std": 1.9511999797183293
+  },
+  "unseen_pair_F1": {
+   "mean": 16.32645887344088,
+   "std": 1.4986481079763423
+  },
+  "unseen_n_gold": 956
+ },
+ "q2only_zeroshot": {
+  "n_seeds": 3,
+  "seen_det_F1": {
+   "mean": 62.227443942677105,
+   "std": 1.0676786099634803
+  },
+  "seen_pair_F1": {
+   "mean": 54.63728269487123,
+   "std": 0.3456440983535841
+  },
+  "seen_n_gold": 1794,
+  "unseen_det_F1": {
+   "mean": 21.14606934271385,
+   "std": 1.1192745846254302
+  },
+  "unseen_pair_F1": {
+   "mean": 16.993674245298344,
+   "std": 0.8579408954743049
+  },
+  "unseen_n_gold": 956
+ },
+ "bl_xlmr_frozen_zeroshot": {
+  "n_seeds": 3,
+  "seen_det_F1": {
+   "mean": 52.91194594844745,
+   "std": 2.5769217111460265
+  },
+  "seen_pair_F1": {
+   "mean": 47.673598073201894,
+   "std": 1.9833109765253083
+  },
+  "seen_n_gold": 1794,
+  "unseen_det_F1": {
+   "mean": 1.5049827130364042,
+   "std": 2.6067065234919036
+  },
+  "unseen_pair_F1": {
+   "mean": 0.9762050030506407,
+   "std": 1.6908366638866406
+  },
+  "unseen_n_gold": 956
+ },
+ "bl_banglabert_zeroshot": {
+  "n_seeds": 3,
+  "seen_det_F1": {
+   "mean": 57.45259941068195,
+   "std": 1.750045118631403
+  },
+  "seen_pair_F1": {
+   "mean": 53.804059162193646,
+   "std": 1.597888657731145
+  },
+  "seen_n_gold": 1794,
+  "unseen_det_F1": {
+   "mean": 1.5069632222422567,
+   "std": 1.127407847145334
+  },
+  "unseen_pair_F1": {
+   "mean": 0.5977903951633714,
+   "std": 0.5443056505074008
+  },
+  "unseen_n_gold": 956
+ },
+ "bl_xlmr_zeroshot": {
+  "n_seeds": 1,
+  "seen_det_F1": {
+   "mean": 68.90862944162437,
+   "std": 0.0
+  },
+  "seen_pair_F1": {
+   "mean": 64.1497461928934,
+   "std": 0.0
+  },
+  "seen_n_gold": 1794,
+  "unseen_det_F1": {
+   "mean": 7.061790668348046,
+   "std": 0.0
+  },
+  "unseen_pair_F1": {
+   "mean": 3.0685161832702814,
+   "std": 0.0
+  },
+  "unseen_n_gold": 956
+ }
+}

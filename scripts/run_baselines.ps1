@@ -1,4 +1,4 @@
-# Baseline queue (sequential). Skips runs that already have metrics.json. Log: runs/queue_log.txt
+﻿# Baseline queue (sequential). Skips runs that already have metrics.json. Log: runs/queue_log.txt
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $py = "C:\Users\USER\.venvs\quam-absa\Scripts\python.exe"
 $FT = @("--freeze-embeddings", "--grad-ckpt")                                  # XLM-R full fine-tune (fits 4 GB)
@@ -19,6 +19,8 @@ $jobs = @(
   @("bl_xlmr_frozen_zeroshot_s1", "xlm-roberta-base",      "zeroshot", 1,  $FR),
   @("bl_xlmr_frozen_zeroshot_s2", "xlm-roberta-base",      "zeroshot", 2,  $FR),
   @("bl_banglabert_zeroshot",     "csebuetnlp/banglabert", "zeroshot", 42, @()),
+  @("bl_banglabert_zeroshot_s1",  "csebuetnlp/banglabert", "zeroshot", 1,  @()),
+  @("bl_banglabert_zeroshot_s2",  "csebuetnlp/banglabert", "zeroshot", 2,  @()),
   @("bl_xlmr_zeroshot",           "xlm-roberta-base",      "zeroshot", 42, $FT)
 )
 foreach ($j in $jobs) {
@@ -50,3 +52,4 @@ foreach ($j in $bjobs) {
   & $py @a > $null 2> "runs\$($j[0]).err"
   Add-Content runs\queue_log.txt "$(Get-Date -Format HH:mm) end   $($j[0]) rc=$LASTEXITCODE $([math]::Round(((Get-Date)-$t0).TotalMinutes,1)) min"
 }
+

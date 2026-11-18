@@ -1,0 +1,33 @@
+{
+ "split": "q2_official_vs_xlmr_frozen",
+ "ours": [
+  "q2_official",
+  "q2_official_s1",
+  "q2_official_s2"
+ ],
+ "baseline": [
+  "bl_xlmr_frozen_official",
+  "bl_xlmr_frozen_official_s1",
+  "bl_xlmr_frozen_official_s2"
+ ],
+ "n_reviews": 3103,
+ "ours_pairF1": 58.04784038409031,
+ "baseline_pairF1": 58.550715444828136,
+ "diff": -0.5028750607378285,
+ "diff_95CI": [
+  -1.270530264355403,
+  0.25733336888284164
+ ],
+ "p_value": 0.901,
+ "bootstrap_samples": 10000,
+ "per_seed_ours": [
+  58.41970655539102,
+  56.98013613001805,
+  58.74367846686186
+ ],
+ "per_seed_base": [
+  58.528381219341284,
+  58.15736381977135,
+  58.96640129537175
+ ]
+}

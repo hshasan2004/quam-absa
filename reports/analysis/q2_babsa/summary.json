@@ -1,0 +1,259 @@
+{
+ "run": "q2_babsa",
+ "config": {
+  "name": "q2_babsa",
+  "data": "babsa",
+  "eco_split": "official",
+  "cache": "C:\\Users\\USER\\.cache\\quam-absa\\xlm-roberta-base-paired",
+  "epochs": 15,
+  "bs": 32,
+  "lr": 0.001,
+  "wd": 0.05,
+  "d_model": 256,
+  "heads": 4,
+  "layout": "mm",
+  "dropout": 0.1,
+  "presence_mode": "mag+value",
+  "readout": "hybrid",
+  "direct": "add",
+  "id_drop": 0.2,
+  "direct_raw": true,
+  "no_domain": false,
+  "query_init": "free",
+  "overall_weight": 0.5,
+  "cons_weight": 0.0,
+  "babsa_neg": 3,
+  "patience": 99,
+  "overfit": 0,
+  "seed": 42
+ },
+ "efficiency": {
+  "forward_seconds": 1.8322355999844149,
+  "reviews": 2114,
+  "aspect_queries": 8912,
+  "reviews_per_s": 1153.78175165791,
+  "ms_per_review": 0.8667150425659483,
+  "peak_gpu_GB": 0.5197386741638184,
+  "params_M": 10.03589,
+  "memory_floats_per_review": 132096,
+  "note": "memory = final mLSTM state (C, n) of both directions; fixed size, independent of review length and of the number of aspects queried"
+ },
+ "best_epoch": 7,
+ "babsa_metrics": {
+  "sent_acc": 0.633852140077821,
+  "sent_macroF1": 0.6342693531164773,
+  "sent_macroF1_verbatim": 0.6398603594228001,
+  "n_verbatim": 2060,
+  "sent_macroF1_nonverbatim": 0.5981819204940496,
+  "n_nonverbatim": 510,
+  "presence_AUROC": 0.8901101850795204
+ },
+ "cm_babsa_sentiment": [
+  [
+   612,
+   182,
+   55
+  ],
+  [
+   216,
+   477,
+   182
+  ],
+  [
+   96,
+   210,
+   540
+  ]
+ ],
+ "report_babsa_sentiment": {
+  "positive": {
+   "precision": 0.6623376623376623,
+   "recall": 0.7208480565371025,
+   "f1-score": 0.6903553299492385,
+   "support": 849.0
+  },
+  "neutral": {
+   "precision": 0.5489067894131185,
+   "recall": 0.5451428571428572,
+   "f1-score": 0.5470183486238532,
+   "support": 875.0
+  },
+  "negative": {
+   "precision": 0.694980694980695,
+   "recall": 0.6382978723404256,
+   "f1-score": 0.6654343807763401,
+   "support": 846.0
+  },
+  "accuracy": 0.633852140077821,
+  "macro avg": {
+   "precision": 0.6354083822438253,
+   "recall": 0.6347629286734617,
+   "f1-score": 0.6342693531164773,
+   "support": 2570.0
+  },
+  "weighted avg": {
+   "precision": 0.6344637291886467,
+   "recall": 0.633852140077821,
+   "f1-score": 0.6333502787196726,
+   "support": 2570.0
+  }
+ },
+ "cm_babsa_verbatim": [
+  [
+   454,
+   148,
+   40
+  ],
+  [
+   167,
+   418,
+   145
+  ],
+  [
+   73,
+   174,
+   441
+  ]
+ ],
+ "cm_babsa_nonverbatim": [
+  [
+   158,
+   34,
+   15
+  ],
+  [
+   49,
+   59,
+   37
+  ],
+  [
+   23,
+   36,
+   99
+  ]
+ ],
+ "babsa_per_domain": [
+  [
+   "Book Review",
+   780,
+   "67.7",
+   "62.1"
+  ],
+  [
+   "Politics / Social Issue",
+   552,
+   "61.2",
+   "51.0"
+  ],
+  [
+   "General Comment",
+   318,
+   "62.9",
+   "61.2"
+  ],
+  [
+   "Personal Opinion",
+   164,
+   "56.1",
+   "55.0"
+  ],
+  [
+   "Religious / Spiritual Content",
+   164,
+   "65.9",
+   "59.8"
+  ],
+  [
+   "Culture / History",
+   146,
+   "54.8",
+   "49.5"
+  ],
+  [
+   "Food Review",
+   83,
+   "49.4",
+   "47.8"
+  ],
+  [
+   "Education",
+   68,
+   "63.2",
+   "60.4"
+  ],
+  [
+   "Finance / Business",
+   68,
+   "55.9",
+   "50.4"
+  ],
+  [
+   "Travel",
+   51,
+   "58.8",
+   "59.4"
+  ],
+  [
+   "Entertainment",
+   43,
+   "72.1",
+   "69.6"
+  ],
+  [
+   "Sports",
+   39,
+   "69.2",
+   "54.4"
+  ],
+  [
+   "Health / Fitness",
+   28,
+   "75.0",
+   "75.7"
+  ],
+  [
+   "Customer Service",
+   23,
+   "73.9",
+   "69.4"
+  ],
+  [
+   "Technology",
+   23,
+   "87.0",
+   "83.8"
+  ],
+  [
+   "Product Review",
+   9,
+   "66.7",
+   "58.5"
+  ],
+  [
+   "Music Review",
+   6,
+   "66.7",
+   "48.9"
+  ]
+ ],
+ "babsa_per_script": [
+  [
+   "bangla",
+   2530,
+   "63.2",
+   "63.3"
+  ],
+  [
+   "mixed",
+   21,
+   "90.5",
+   "77.8"
+  ],
+  [
+   "banglish",
+   16,
+   "50.0",
+   "38.9"
+  ]
+ ]
+}

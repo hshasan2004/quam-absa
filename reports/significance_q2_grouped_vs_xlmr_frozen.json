@@ -1,0 +1,33 @@
+{
+ "split": "q2_grouped_vs_xlmr_frozen",
+ "ours": [
+  "q2_grouped",
+  "q2_grouped_s1",
+  "q2_grouped_s2"
+ ],
+ "baseline": [
+  "bl_xlmr_frozen_grouped",
+  "bl_xlmr_frozen_grouped_s1",
+  "bl_xlmr_frozen_grouped_s2"
+ ],
+ "n_reviews": 3103,
+ "ours_pairF1": 55.60615154229328,
+ "baseline_pairF1": 57.06153590957312,
+ "diff": -1.4553843672798328,
+ "diff_95CI": [
+  -2.231644489577644,
+  -0.6696296208409425
+ ],
+ "p_value": 1.0,
+ "bootstrap_samples": 10000,
+ "per_seed_ours": [
+  55.29479107040641,
+  55.530346001134426,
+  55.993317555339
+ ],
+ "per_seed_base": [
+  57.2112676056338,
+  56.97216564833673,
+  57.001174474748794
+ ]
+}
