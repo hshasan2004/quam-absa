@@ -38,6 +38,7 @@ class Collector:
             for j in np.nonzero(a_mask[i])[0]:
                 self.asp["dataset"].append(ds)
                 self.asp["domain"].append(batch["domains"][i])
+                self.asp["id"].append(batch["ids"][i])
                 self.asp["name"].append(batch["aspect_names"][i][j])
                 self.asp["gold_pres"].append(batch["presence"][i, j].item())
                 self.asp["prob"].append(pres[i, j])
