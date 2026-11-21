@@ -202,38 +202,7 @@ texts from many domains with aspect terms and their sentiment; the release repor
 
 \begin{figure}[t]
 \centering
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-  font=\small, >=Stealth,
-  box/.style={draw, rounded corners=2pt, align=center, minimum height=7mm, inner sep=3pt},
-  enc/.style={box, fill=gray!12},
-  rnn/.style={box, fill=blue!10},
-  mem/.style={box, fill=orange!18, minimum width=16mm, minimum height=12mm},
-  head/.style={box, fill=green!12},
-]
-  \node[enc, text width=62mm] (txt) {\texttt{<s>} Router : price $|$ range $|$ speed $|$ \dots\ \texttt{</s></s>} review \texttt{</s>}};
-  \node[enc, below=6mm of txt] (xlmr) {fine-tuned encoder\\(XLM-R / BanglaBERT, one pass)};
-  \node[rnn, right=10mm of xlmr] (pre) {[domain + script]\\prefix};
-  \node[rnn, right=6mm of pre, minimum width=30mm] (bi) {bidirectional\\Gated DeltaNet $\times 2$};
-  \node[mem, right=8mm of bi] (S) {$\mathbf{S}_T$\\(fwd, bwd)};
-  \node[rnn, above=10mm of S] (q) {span mean over\\name ``range''\\$\to\mathbf{q}_a$};
-  \node[box, fill=gray!8, below=8mm of pre] (g) {direct scorer\\$s_a(\mathbf{g},\mathbf{q}_a)$};
-  \node[head, right=10mm of S, yshift=7mm] (sent) {sentiment};
-  \node[head, right=10mm of S, yshift=-9mm] (pres) {presence $p_a$};
-  \node[head, below=6mm of pres] (ov) {overall sentiment};
-  \draw[->] (txt) -- (xlmr);
-  \draw[->] (xlmr) -- node[above]{review} (pre);
-  \draw[->] (pre) -- (bi);
-  \draw[->] (bi) -- node[above]{final} (S);
-  \draw[->] (xlmr.north east) to[bend left=15] node[above, pos=0.5]{name spans} (q.west);
-  \draw[->] (q) -- node[right]{read} (S);
-  \draw[->] (xlmr) |- (g);
-  \draw[->] (S.east) -- ++(4mm,0) |- (sent.west);
-  \draw[->] (S.east) -- ++(4mm,0) |- (pres.west);
-  \draw[->] (g.east) -| ($(pres.south west)+(2mm,0)$);
-  \draw[->] (sent.east) -- ++(3mm,0) |- (ov.east);
-  \draw[->] (pres.south) -- (ov.north);
-\end{tikzpicture}}
+\includegraphics[width=\textwidth]{figures/architecture.pdf}
 \caption{Overview of \quam{}. The category and all its candidate aspect names are written into the
 first segment, so the encoder reads names and review jointly in one pass. Each aspect's query is the
 mean of the encoder states over its own name span. It reads the final state of a bidirectional Gated

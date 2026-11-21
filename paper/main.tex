@@ -98,9 +98,18 @@ EComReviews-BD \citep{haque2026ecomreviews} and BABSA \citep{rohman2025babsa}. B
 \citep{bhattacharjee2022banglabert} and XLM-R \citep{conneau2020xlmr} are the usual encoders.
 
 % =========================================================================
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/architecture.pdf}
+\caption{\quam{}. Category and candidate aspect names are written into the input of a fine-tuned encoder; each aspect
+query is the mean over its name span, reads the final state of a bidirectional Gated DeltaNet, and is also scored
+directly; both scores are added.}
+\label{fig:arch}
+\end{figure*}
+
 \section{Method}
 
-\paragraph{Aspect-prompted encoding.} A review $x$ of category $c$ with aspects $\mathcal{A}_c$ (13 on
+\paragraph{Aspect-prompted encoding.} Figure~\ref{fig:arch} shows the model. A review $x$ of category $c$ with aspects $\mathcal{A}_c$ (13 on
 average) is encoded once as \texttt{<s>} $c$ \texttt{:} $a_1$ \texttt{|} \dots \texttt{|} $a_{|\mathcal{A}_c|}$
 \texttt{</s></s>} $x$ \texttt{</s>}. The encoder is fine-tuned (lr $2\times10^{-5}$, frozen word
 embeddings, gradient checkpointing). Each aspect query is the layer-normalised mean of the final states
