@@ -276,14 +276,15 @@ class BiSLSTMBlock(nn.Module):
 
 
 class BiXLSTMStack(nn.Module):
-    """layout: string of 'm'/'s', e.g. 'mmsm'. The last block must be 'm' (its memory is queried)."""
+    """layout: string of 'm' (mLSTM) / 's' (sLSTM) / 'g' (Gated DeltaNet), e.g. 'mmsm'.
+    The last block must be 'm' or 'g': its final matrix memory is queried."""
 
     def __init__(self, d_model, heads, layout="mmsm", dropout=0.0):
         super().__init__()
-        assert layout[-1] == "m", "QuAM reads the memory of the last block, which must be mLSTM"
-        self.blocks = nn.ModuleList(
-            BiMLSTMBlock(d_model, heads, dropout=dropout) if c == "m" else BiSLSTMBlock(d_model, heads, dropout=dropout)
-            for c in layout)
+        from .gdn import BiGDNBlock
+        assert layout[-1] in "mg", "QuAM reads the memory of the last block, which must be mLSTM or GDN"
+        kinds = {"m": BiMLSTMBlock, "s": BiSLSTMBlock, "g": BiGDNBlock}
+        self.blocks = nn.ModuleList(kinds[c](d_model, heads, dropout=dropout) for c in layout)
         self.norm = nn.LayerNorm(d_model)
 
     def forward(self, x, mask):

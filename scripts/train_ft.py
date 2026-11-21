@@ -1,4 +1,4 @@
-"""QuAM-FT: QuAM-xLSTM on top of a fine-tuned encoder (instead of a frozen, cached one).
+﻿"""QuAM-FT: QuAM-xLSTM on top of a fine-tuned encoder (instead of a frozen, cached one).
 
     python scripts/train_ft.py --name ft_official --eco-split official
     python scripts/train_ft.py --name ftp_official --eco-split official --prompt-aspects
@@ -48,6 +48,8 @@ def parse():
     ap.add_argument("--model", default="xlm-roberta-base")
     ap.add_argument("--cache", default=str(PAIRED), help="only used for aspect-name / category query vectors")
     ap.add_argument("--prompt-aspects", action="store_true")
+    ap.add_argument("--aspect-read", choices=["span", "marker"], default="span",
+                    help="span: mean over the aspect-name tokens; marker: the separator token before the name (TMM-style)")
     ap.add_argument("--epochs", type=int, default=10)
     ap.add_argument("--patience", type=int, default=3)
     ap.add_argument("--bs", type=int, default=16)
@@ -63,6 +65,7 @@ def parse():
     ap.add_argument("--layout", default="mm")
     ap.add_argument("--readout", default="hybrid")
     ap.add_argument("--id-drop", type=float, default=0.2)
+    ap.add_argument("--direct", choices=["add", "only", "off"], default="add", help="only: no xLSTM memory (ablation)")
     ap.add_argument("--overall-weight", type=float, default=0.5)
     ap.add_argument("--babsa-neg", type=int, default=3)
     ap.add_argument("--cons-weight", type=float, default=0.0)
@@ -89,9 +92,9 @@ class NoTokens:
 
 
 class TextDataset(ABSADataset):
-    def __init__(self, *a, tok, max_len, prompt, **kw):
+    def __init__(self, *a, tok, max_len, prompt, marker=False, **kw):
         super().__init__(*a, **kw)
-        self.tok, self.max_len, self.prompt = tok, max_len, prompt
+        self.tok, self.max_len, self.prompt, self.marker = tok, max_len, prompt, marker
         self._piece = {}
 
     def piece(self, s):
@@ -105,11 +108,16 @@ class TextDataset(ABSADataset):
         ids, spans = [t.cls_token_id] + self.piece(domain_query(r["domain"])), []
         if self.prompt:
             ids += self.piece(":")
-            for j, n in enumerate(item["aspect_names"]):
-                if j:
+            names = item["aspect_names"]
+            order = list(range(len(names)))
+            if r["dataset"] == "babsa":       # gold aspects come first, sampled absent ones last: hide that order
+                random.Random(hash((self.seed, self.epoch if self.train else -1, idx, 7919))).shuffle(order)
+            spans = [None] * len(names)
+            for k, j in enumerate(order):
+                if k:
                     ids += self.piece("|")
-                p = self.piece(n)
-                spans.append((len(ids), len(ids) + len(p)))
+                p = self.piece(names[j])
+                spans[j] = (len(ids) - 1, len(ids)) if self.marker else (len(ids), len(ids) + len(p))
                 ids += p
         sep2 = [t.sep_token_id, t.sep_token_id] if "roberta" in type(t).__name__.lower() else [t.sep_token_id]
         ids += sep2 + self.piece(r["text"])[: self.max_len] + [t.sep_token_id]
@@ -155,7 +163,7 @@ class QuAMFT(nn.Module):
             self.register_buffer("q_mean", stats["q_mean"].float().clone())
             self.register_buffer("q_sd", stats["q_std"].float().clone())
         self.head = QuAM(h, cache.query(OVERALL_QUERY), stats, d_model=args.d_model, heads=args.heads,
-                         layout=args.layout, readout=args.readout, direct="add",
+                         layout=args.layout, readout=args.readout, direct=args.direct,
                          aspect_vocab=eco_vocab() if args.data == "eco" else (), id_drop=args.id_drop,
                          direct_raw=True)
 
@@ -218,7 +226,7 @@ def main():
         r["splits"]["_run"] = r["splits"][args.eco_split] if r["dataset"] == "eco" else r["splits"]["grouped"]
     tok = AutoTokenizer.from_pretrained(args.model)
     kw = dict(babsa_pool=pool, babsa_neg=args.babsa_neg, seed=args.seed, tok=tok, max_len=args.max_len,
-              prompt=args.prompt_aspects, limit=args.limit or None)
+              prompt=args.prompt_aspects, marker=args.aspect_read == "marker", limit=args.limit or None)
     proxy = NoTokens(cache)
     ds = {p: TextDataset(recs, proxy, "_run", p, train=(p == "train"), **kw) for p in ("train", "val", "test")}
     log(f"{args.model} prompt={args.prompt_aspects} | train={len(ds['train'])} val={len(ds['val'])} test={len(ds['test'])}")

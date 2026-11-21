@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .data import SCRIPTS
+from .gdn import gdn_read
 from .xlstm import BiXLSTMStack, mlstm_read
 
 PRESENCE_MODES = ("mag+value", "mag", "value")
@@ -129,8 +130,9 @@ class QuAM(nn.Module):
             kf, kb = self.stack.key_of(self.inp(self.tok_std(aq)).flatten(0, 1))
             q = q + torch.stack([kf, kb], 1).view(B, A, 2, self.heads, -1)
         (sf, sb) = state
-        rf, mf = mlstm_read(sf, q[:, :, 0])
-        rb, mb = mlstm_read(sb, q[:, :, 1])
+        rd = gdn_read if torch.is_tensor(sf) else mlstm_read      # GDN state is S; mLSTM state is (C, n, m)
+        rf, mf = rd(sf, q[:, :, 0])
+        rb, mb = rd(sb, q[:, :, 1])
         r = torch.cat([rf.flatten(2), rb.flatten(2)], -1)
         rp = None
         if self.readout in ("meanpool", "hybrid"):

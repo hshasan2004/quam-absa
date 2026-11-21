@@ -1,0 +1,29 @@
+{
+ "split": "official",
+ "ours": [
+  "ftp_official",
+  "ftp_official_s1",
+  "ftp_official_s2"
+ ],
+ "baseline": [
+  "bl_xlmr_official"
+ ],
+ "n_reviews": 3103,
+ "ours_pairF1": 72.74175101118304,
+ "baseline_pairF1": 62.055109070034455,
+ "diff": 10.68664194114859,
+ "diff_95CI": [
+  9.524603660081745,
+  11.863800227292455
+ ],
+ "p_value": 0.0,
+ "bootstrap_samples": 5000,
+ "per_seed_ours": [
+  72.86425400242163,
+  72.27788911155643,
+  73.08310991957104
+ ],
+ "per_seed_base": [
+  62.055109070034455
+ ]
+}

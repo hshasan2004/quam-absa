@@ -1,0 +1,33 @@
+{
+ "split": "official",
+ "ours": [
+  "ftp_gdn_official",
+  "ftp_gdn_official_s1",
+  "ftp_gdn_official_s2"
+ ],
+ "baseline": [
+  "bl_banglabert_official",
+  "bl_banglabert_official_s1",
+  "bl_banglabert_official_s2"
+ ],
+ "n_reviews": 3103,
+ "ours_pairF1": 72.7063376760398,
+ "baseline_pairF1": 57.86159679355814,
+ "diff": 14.844740882481645,
+ "diff_95CI": [
+  13.673630233679829,
+  16.00980725057755
+ ],
+ "p_value": 0.0,
+ "bootstrap_samples": 10000,
+ "per_seed_ours": [
+  72.49157376199118,
+  73.08721241305511,
+  72.54022685307307
+ ],
+ "per_seed_base": [
+  58.17867932671559,
+  57.80146952888633,
+  57.60464152507253
+ ]
+}

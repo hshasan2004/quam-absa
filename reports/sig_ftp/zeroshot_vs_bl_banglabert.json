@@ -1,0 +1,33 @@
+{
+ "split": "zeroshot",
+ "ours": [
+  "ftp_zeroshot",
+  "ftp_zeroshot_s1",
+  "ftp_zeroshot_s2"
+ ],
+ "baseline": [
+  "bl_banglabert_zeroshot",
+  "bl_banglabert_zeroshot_s1",
+  "bl_banglabert_zeroshot_s2"
+ ],
+ "n_reviews": 2637,
+ "ours_pairF1": 57.772986635020395,
+ "baseline_pairF1": 38.91225067522524,
+ "diff": 18.86073595979516,
+ "diff_95CI": [
+  17.10416968404432,
+  20.595790555644662
+ ],
+ "p_value": 0.0,
+ "bootstrap_samples": 5000,
+ "per_seed_ours": [
+  59.3607305936073,
+  57.385620915032675,
+  56.572608396421195
+ ],
+ "per_seed_base": [
+  38.11610076670318,
+  39.28662420382166,
+  39.334027055150884
+ ]
+}

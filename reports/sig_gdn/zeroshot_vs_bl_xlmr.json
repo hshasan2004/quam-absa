@@ -1,0 +1,29 @@
+{
+ "split": "zeroshot",
+ "ours": [
+  "ftp_gdn_zeroshot",
+  "ftp_gdn_zeroshot_s1",
+  "ftp_gdn_zeroshot_s2"
+ ],
+ "baseline": [
+  "bl_xlmr_zeroshot"
+ ],
+ "n_reviews": 2637,
+ "ours_pairF1": 57.26367413724471,
+ "baseline_pairF1": 27.408343868520856,
+ "diff": 29.855330268723858,
+ "diff_95CI": [
+  28.463562510496622,
+  31.231608840468457
+ ],
+ "p_value": 0.0,
+ "bootstrap_samples": 10000,
+ "per_seed_ours": [
+  59.441707717569784,
+  56.377346382159466,
+  55.97196831200487
+ ],
+ "per_seed_base": [
+  27.408343868520856
+ ]
+}

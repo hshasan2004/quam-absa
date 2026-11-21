@@ -14,7 +14,49 @@ $jobs = @(
   @("ftp_grouped_s1",  "grouped",  1,  $P),
   @("ftp_grouped_s2",  "grouped",  2,  $P),
   @("ft_zeroshot",     "zeroshot", 42, @()),
-  @("ft_grouped",      "grouped",  42, @())
+  @("ft_grouped",      "grouped",  42, @()),
+  # BABSA (grouped split), aspect-prompted, two encoders
+  @("ftp_babsa_banglabert",    "grouped", 42, (@("--data", "babsa", "--model", "csebuetnlp/banglabert") + $P)),
+  @("ftp_babsa_xlmr",          "grouped", 42, (@("--data", "babsa") + $P)),
+  @("ftp_babsa_banglabert_s1", "grouped", 1,  (@("--data", "babsa", "--model", "csebuetnlp/banglabert") + $P)),
+  @("ftp_babsa_banglabert_s2", "grouped", 2,  (@("--data", "babsa", "--model", "csebuetnlp/banglabert") + $P)),
+  # ablation: no xLSTM memory (direct scorer only)
+  @("ftp_nomem_official", "official", 42, (@("--direct", "only") + $P)),
+  @("ftp_nomem_zeroshot", "zeroshot", 42, (@("--direct", "only") + $P)),
+  # partly / fully frozen encoder: does the xLSTM memory matter when the encoder is not fully tuned?
+  @("ftp_f9_official",        "official", 42, (@("--freeze-layers", "9") + $P)),
+  @("ftp_nomem_f9_official",  "official", 42, (@("--freeze-layers", "9", "--direct", "only") + $P)),
+  @("ftp_f12_official",       "official", 42, (@("--freeze-layers", "12") + $P)),
+  @("ftp_nomem_f12_official", "official", 42, (@("--freeze-layers", "12", "--direct", "only") + $P)),
+  # zero-shot: seeds for the no-memory ablation, and a memory-only reader (no direct scorer)
+  @("ftp_nomem_zeroshot_s1",  "zeroshot", 1,  (@("--direct", "only") + $P)),
+  @("ftp_nomem_zeroshot_s2",  "zeroshot", 2,  (@("--direct", "only") + $P)),
+  @("ftp_memonly_zeroshot",   "zeroshot", 42, (@("--direct", "off") + $P)),
+  # Gated DeltaNet memory (ICLR 2025) instead of the mLSTM
+  @("ftp_gdn_official",       "official", 42, (@("--layout", "gg") + $P)),
+  @("ftp_gdn_zeroshot",       "zeroshot", 42, (@("--layout", "gg") + $P)),
+  @("ftp_gdn_official_s1",    "official", 1,  (@("--layout", "gg") + $P)),
+  @("ftp_nomem_official_s1",  "official", 1,  (@("--direct", "only") + $P)),
+  @("ftp_gdn_zeroshot_s1",    "zeroshot", 1,  (@("--layout", "gg") + $P)),
+  @("ftp_gdn_official_s2",    "official", 2,  (@("--layout", "gg") + $P)),
+  @("ftp_nomem_official_s2",  "official", 2,  (@("--direct", "only") + $P)),
+  @("ftp_gdn_zeroshot_s2",    "zeroshot", 2,  (@("--layout", "gg") + $P)),
+  # final model (GDN memory): leakage-free split and BABSA
+  @("ftp_gdn_grouped",        "grouped",  42, (@("--layout", "gg") + $P)),
+  @("ftp_gdn_grouped_s1",     "grouped",  1,  (@("--layout", "gg") + $P)),
+  @("ftp_gdn_grouped_s2",     "grouped",  2,  (@("--layout", "gg") + $P)),
+  @("ftp_gdn_babsa_banglabert",    "grouped", 42, (@("--layout", "gg", "--data", "babsa", "--model", "csebuetnlp/banglabert") + $P)),
+  @("ftp_gdn_babsa_banglabert_s1", "grouped", 1,  (@("--layout", "gg", "--data", "babsa", "--model", "csebuetnlp/banglabert") + $P)),
+  @("ftp_gdn_babsa_banglabert_s2", "grouped", 2,  (@("--layout", "gg", "--data", "babsa", "--model", "csebuetnlp/banglabert") + $P)),
+  @("ftp_gdn_babsa_xlmr",          "grouped", 42, (@("--layout", "gg", "--data", "babsa") + $P)),
+  # TMM-style readout (marker token before each name instead of the mean over the name span)
+  @("ftp_gdn_marker_official", "official", 42, (@("--layout", "gg", "--aspect-read", "marker") + $P)),
+  @("ftp_gdn_marker_zeroshot", "zeroshot", 42, (@("--layout", "gg", "--aspect-read", "marker") + $P)),
+  # extra seeds for the no-prompt ablation
+  @("ft_official_s1",         "official", 1,  @()),
+  @("ft_zeroshot_s1",         "zeroshot", 1,  @()),
+  @("ft_nomem_official_s1",   "official", 1,  @("--direct", "only")),
+  @("ft_nomem_zeroshot_s1",   "zeroshot", 1,  @("--direct", "only"))
 )
 foreach ($j in $jobs) {
   if ($args.Count -and -not ($args -contains $j[0])) { continue }

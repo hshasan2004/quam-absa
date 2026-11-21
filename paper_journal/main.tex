@@ -1,8 +1,10 @@
-% QuAM-xLSTM: journal manuscript (target: ACM TALLIP). Format-neutral draft in the article class;
+% QuAM-GDN: journal manuscript (target: ACM TALLIP). Format-neutral draft in the article class;
 % move into the journal template (acmart, acmsmall) once the format is confirmed.
 % Compile: pdflatex main; bibtex main; pdflatex main; pdflatex main   (or upload the folder to Overleaf)
-% All numbers come from paper/numbers.json, reports/*.json (scripts/paper_numbers.py,
-% scripts/significance.py, scripts/unseen_aspects.py, scripts/journal_tables.py).
+% Numbers: reports/final_numbers.json (scripts/final_numbers.py), reports/sig_gdn/*.json
+% (scripts/significance.py, scripts/significance_babsa.py), reports/memory_significance.json
+% (scripts/memory_significance.py), reports/ablation.json (scripts/ablation_table.py),
+% reports/final_analysis.json and figures/final_* (scripts/final_figures.py).
 \documentclass[11pt]{article}
 \usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage[T1]{fontenc}
@@ -23,10 +25,10 @@
 \onehalfspacing
 
 \newcommand{\pmstd}[2]{#1{\scriptsize$\pm$#2}}
-\newcommand{\quam}{QuAM-xLSTM}
+\newcommand{\quam}{QuAM-GDN}
 
-\title{Read Once, Query by Name: Aspect-Name Queries over an xLSTM Matrix Memory for
-Aspect-Based Sentiment Analysis of Bangla, Banglish and English Reviews}
+\title{Aspect-Prompted Delta-Rule Memory for Zero-Shot Aspect-Based Sentiment Analysis of
+Code-Mixed Bangla E-Commerce Reviews}
 
 \author{First Author$^{1}$ \and Second Author (Supervisor)$^{1}$\\[2pt]
 \small $^{1}$Department of Computer Science and Engineering, Daffodil International University, Dhaka, Bangladesh\\
@@ -39,91 +41,96 @@ Aspect-Based Sentiment Analysis of Bangla, Banglish and English Reviews}
 % =========================================================================
 \begin{abstract}
 Aspect-based sentiment analysis (ABSA) of South Asian e-commerce reviews has to handle Bangla,
-romanised Bangla (Banglish) and English, often mixed in a single review, and product categories
-whose aspect inventories keep changing. We present \quam{}, a model that encodes a review once,
-together with its product category, with a frozen multilingual encoder and a bidirectional xLSTM,
-and answers every aspect by querying the final mLSTM matrix memory with the aspect name, combined
-with a per-aspect scorer on pooled encoder states. Because published baselines on these data are
-not directly comparable, we re-train fine-tuned BanglaBERT, fine-tuned XLM-R and a frozen-encoder
-classifier on identical splits with the same metric code and validation-based threshold
-selection. Tuned in this way, the baselines reach a strict aspect--sentiment pair F1 of 57.9
-(BanglaBERT) and 62.1 (XLM-R) on EComReviews-BD, far above the 45.0 previously reported, and we show
-that the reported precision--recall profile is consistent with an untuned presence threshold.
-\quam{} trains 10M parameters on a 4\,GB laptop GPU. It matches fine-tuned BanglaBERT on the standard
-split (\pmstd{58.0}{0.9} vs.\ \pmstd{57.9}{0.3}; $p=0.39$), trails it by 2.3 points on a leakage-free
-split, and is the best system on product categories unseen in training, where it improves over
-fine-tuned BanglaBERT by 1.9 points ($p=0.012$), over a strong frozen-encoder classifier by 7.0
-points and over fine-tuned XLM-R by 13.4 points ($p<0.001$), and detects unseen aspect names that the
-classifiers cannot represent (detection F1 20.1 vs.\ 1.5--7.1). It also detects rare aspects far better
-than the fine-tuned encoders. We release a leakage-free split (11.5\% of the standard test reviews
-also occur in training) and a zero-shot split, and we report the first aspect-sentiment baselines
-on the BABSA dataset (macro-F1 70.6 for fine-tuned BanglaBERT). Ablations show that the memory read
-mainly improves overall-review sentiment (+4.9 macro-F1) rather than aspect detection.
+romanised Bangla (Banglish) and English, often mixed within one review, and product categories whose
+aspect inventories keep changing. We present \quam{}, a model that reads a review once together with
+the names of all candidate aspects of its product category, fine-tunes a multilingual encoder on this
+input, and answers every aspect from two sources: a contextual query pooled over the aspect's own name
+span, and a read of a bidirectional Gated DeltaNet memory, a delta-rule recurrent memory that we
+adapt to be queried by aspect names. Because aspects are represented only through their names, the
+model scores aspect names never seen in training without new parameters. We re-train fine-tuned
+BanglaBERT and XLM-R under identical splits, metric code and threshold selection. On EComReviews-BD,
+\quam{} reaches a strict aspect--sentiment pair F1 of 72.7 on the standard split, 71.2 on a
+leakage-free split and 57.3 on four product categories unseen in training, improving over the
+strongest baseline by 10.7, 9.3 and 18.4 points ($p<0.001$ for all). On unseen aspect names, where
+the classifiers reach at most 3.1 pair F1, it reaches 36.7. Ablations show that writing the aspect
+names into the input is the largest single gain (+5.7 on seen and +8.9 on unseen categories), and
+that the Gated DeltaNet memory, unlike an xLSTM memory in the same position, significantly improves
+unseen aspect names (+2.0 pair F1, $p=0.001$) and rare aspects (+1.2 to +1.6 detection macro-F1)
+while leaving overall pair F1 unchanged. On the Bangla-script BABSA dataset, \quam{} with a BanglaBERT
+encoder reaches 71.0 macro-F1 against 70.6 for fine-tuned BanglaBERT (not significant). We release a
+leakage-free split (11.5\% of the standard test reviews also occur in training) and a zero-shot
+category split.
 \end{abstract}
 
-\noindent\textbf{Keywords:} aspect-based sentiment analysis; Bangla; Banglish; code-mixing;
-low-resource languages; xLSTM; matrix memory; zero-shot aspects; evaluation
+\noindent\textbf{Keywords:} aspect-based sentiment analysis; aspect category sentiment analysis;
+Bangla; Banglish; code-mixing; zero-shot aspects; delta rule; Gated DeltaNet; linear recurrent memory
 
 % =========================================================================
 \section{Introduction}
 
 E-commerce platforms in Bangladesh, such as Daraz, collect large numbers of short product reviews.
-They are written in Bangla script, in Banglish (Bangla written in the Latin alphabet), in English,
-or in a mixture of these within one review. Code-mixed text of this kind is known to be difficult
-for sentiment models \citep{patwa2020sentimix}. For sellers and platforms a single review-level
-polarity is of limited use: they need to know \emph{which} aspects of a product (price, delivery,
-battery, sound quality, \dots) are praised or criticised. This is the task of aspect-based
-sentiment analysis \citep[ABSA;][]{pontiki2014semeval,pontiki2016semeval,zhang2023absasurvey}.
+They are written in Bangla script, in Banglish (Bangla written in the Latin alphabet), in English, or
+in a mixture of these within one review. Code-mixed text of this kind is difficult for sentiment
+models \citep{patwa2020sentimix}. For sellers and platforms a single review-level polarity is of
+limited use: they need to know \emph{which} aspects of a product (price, delivery, battery, sound
+quality, \dots) are praised or criticised. This is aspect-based sentiment analysis
+\citep[ABSA;][]{pontiki2014semeval,pontiki2016semeval,zhang2023absasurvey}; with a predefined
+inventory of aspect categories per product category, it is aspect category detection plus aspect
+category sentiment analysis (ACSA).
 
-Two properties of this setting motivate our work. First, the aspect inventory is not fixed:
-marketplaces add product categories, and with them aspect names that a model has never seen. A
-classifier with one output unit per known aspect cannot score such aspects at all. Second,
-computing budgets in the research groups that work on Bangla are often small; our experiments run
-on a single laptop GPU with 4\,GB of memory.
+Two properties of this setting shape our work. First, the aspect inventory is not fixed: marketplaces
+add product categories, and with them aspect names that a model has never seen. A classifier with one
+output unit per known aspect cannot score such aspects at all. Second, computing budgets in research
+groups that work on Bangla are often small; all our experiments run on a single laptop GPU with
+4\,GB of memory.
 
-A common way to use pretrained encoders for ABSA is to pair the review with each aspect and
-classify the pair \citep{sun2019auxiliary}. This handles any aspect name, but re-encodes a review
-once per aspect. Recent work argues for reading a text once and answering every aspect from a
-shared representation \citep{xia2026dabs}. Recurrent models with \emph{matrix memories} make this
-particularly natural. The mLSTM of xLSTM \citep{beck2024xlstm} stores a sequence as a sum of gated
-key--value outer products, $\mathbf{C}_T=\sum_t w_t\,\mathbf{v}_t\mathbf{k}_t^\top$, which can later
-be read with any query vector, including the embedding of an aspect name that never occurred in
-training. If the query is the aspect name, the read returns what the review ``wrote'' under that
-aspect.
+A common way to make any aspect name scorable is to pair the review with each aspect and classify the
+pair \citep{sun2019auxiliary}, which costs one encoder pass per aspect. Multi-aspect models instead
+write all aspects into one input and classify each from its own marker token \citep{wu2020tmm}, or
+read a single encoding with aspect-specific readouts \citep{xia2026dabs}. These models were evaluated
+on English benchmarks with known aspects; they do not detect which aspects are mentioned, and they were
+not tested on aspects unseen in training. Zero-shot ACSA has been studied with generation models and
+large language models \citep{liu2021acsagen,ventirozos2025zeroshotacsa}, again for English.
 
-This article studies whether this idea holds up against carefully tuned baselines. We ask four
-research questions:
+We combine these ideas for code-mixed Bangla and extend them with a memory that is read by aspect
+names. \quam{} writes the product category and all its candidate aspect names into the first segment
+of the encoder input, fine-tunes the encoder, and represents each aspect by the mean of the encoder
+states over its own name. This contextual name embedding is used twice: by a per-aspect scorer, and as
+the query to a \emph{bidirectional Gated DeltaNet} memory \citep{yang2025gdn} that has read the
+review. Gated DeltaNet updates a matrix memory with the gated delta rule: before writing a new
+key--value association it removes what the memory currently returns for that key, so that repeated or
+contradicting mentions overwrite rather than accumulate. Its final state can be queried with any
+vector, including the embedding of an aspect name never seen in training.
+
+This article asks four research questions:
 \begin{description}
   \itemsep0em
-  \item[RQ1] How strong are standard encoders on EComReviews-BD when they are trained and evaluated
-  under identical conditions?
-  \item[RQ2] Can a model that reads a review once with a frozen encoder and queries a fixed-size
-  xLSTM memory with aspect names match fine-tuned encoders on known aspects?
-  \item[RQ3] Does querying by name generalise to product categories and aspect names that were not
-  seen in training?
-  \item[RQ4] What does the memory read contribute, and which design choices matter?
+  \item[RQ1] How strong are standard encoders on EComReviews-BD when trained and evaluated under
+  identical conditions, and how far does \quam{} improve over them?
+  \item[RQ2] Does the model generalise to product categories and aspect names unseen in training?
+  \item[RQ3] Which components matter: the aspect prompt, the span-pooled query, the memory, and
+  fine-tuning the encoder?
+  \item[RQ4] Does a delta-rule memory contribute where an additive (xLSTM) memory does not?
 \end{description}
 
 Our contributions are:
 \begin{enumerate}
   \itemsep0em
-  \item \textbf{\quam{}} (Section~\ref{sec:method}), an ABSA model that reads a review once and
-  answers each aspect by querying the final mLSTM matrix memory with the aspect name, combined with
-  a per-aspect scorer on pooled encoder states. It trains 10M parameters on a frozen XLM-R and fits
-  a 4\,GB GPU.
-  \item \textbf{A controlled comparison} (Sections~\ref{sec:setup} and~\ref{sec:results}). We
-  re-train BanglaBERT, XLM-R and a frozen-encoder classifier on exactly our splits with the same
-  metric code and threshold selection, test differences with a paired bootstrap, and show that the
-  baselines are 13--17 points stronger than previously reported (RQ1).
-  \item \textbf{Where name-based querying helps} (RQ2, RQ3). \quam{} matches fine-tuned BanglaBERT on
-  the standard split, trails it slightly without train--test overlap, and is the best system on
-  unseen product categories and the only one that detects unseen aspect names to a useful degree.
-  \item \textbf{Cleaner evaluation resources} (Section~\ref{sec:data}). We show that 11.5\% of the
-  standard test reviews also occur in the training set, and release a leakage-free split, a
-  zero-shot category split, and the first aspect-sentiment baselines on BABSA \citep{rohman2025babsa}.
-  \item \textbf{Ablations and negative results} (Section~\ref{sec:ablation}, RQ4). The memory read
-  alone is a weaker and less stable aspect detector than a pooled classifier; it mainly improves
-  overall-review sentiment. Several plausible additions did not help.
+  \item \textbf{\quam{}} (Section~\ref{sec:method}), an aspect-prompted ABSA model that detects and
+  classifies all candidate aspects of a review in one encoder pass, scores aspects only through their
+  names, and reads a bidirectional Gated DeltaNet memory with span-pooled contextual aspect queries.
+  To our knowledge, this is the first use of a delta-rule memory for ABSA and the first aspect-name
+  read-out of such a memory. It trains on a 4\,GB laptop GPU.
+  \item \textbf{State-of-the-art results under a controlled comparison} (Section~\ref{sec:results}).
+  Against fine-tuned BanglaBERT and XLM-R trained on the same splits with the same metric code and
+  threshold selection, \quam{} improves strict pair F1 by 9.3--29.9 points on all three EComReviews-BD
+  splits ($p<0.001$), and is the first model to detect unseen aspect names to a useful degree.
+  \item \textbf{A component analysis} (Section~\ref{sec:ablation}). The aspect prompt is the largest
+  gain; the delta-rule memory significantly improves unseen aspect names and rare aspects, whereas an
+  xLSTM memory in the same position does not; and a memory matters most when the encoder is frozen.
+  \item \textbf{Evaluation resources} (Section~\ref{sec:data}). We show that 11.5\% of the standard
+  test reviews also occur in training, and release a leakage-free split, a zero-shot category split,
+  and aspect-sentiment results on BABSA \citep{rohman2025babsa}.
 \end{enumerate}
 The code, the split definitions and all run configurations are available to reviewers and will be
 released upon publication.
@@ -133,61 +140,61 @@ released upon publication.
 \label{sec:related}
 
 \subsection{Aspect-based sentiment analysis}
-ABSA was popularised by the SemEval shared tasks on laptop and restaurant reviews
-\citep{pontiki2014semeval,pontiki2016semeval}; \citet{zhang2023absasurvey} give a recent survey of
-the many sub-tasks. Early neural models used aspect-conditioned attention over LSTM states
-\citep{wang2016atae} or deep memory networks that attend repeatedly over word memories with the
-aspect as the query \citep{tang2016memnet}. With pretrained Transformers \citep{vaswani2017attention,
-devlin2019bert}, ABSA was often cast as sentence-pair classification by constructing an auxiliary
-sentence from the aspect \citep{sun2019auxiliary}. Closest to our setting of predefined aspect
-categories, \citet{schmitt2018joint} predict the presence and polarity of all categories jointly
-in one model, and \citet{hu2019can} constrain attention so that multiple aspects of the same
-sentence attend to different words. Large language models perform well on simple sentiment tasks
-but lag behind small models trained on in-domain data on complex tasks that require structured
-sentiment information, such as ABSA, while they excel in few-shot settings
-\citep{zhang2024llmsentiment}. DABS \citep{xia2026dabs} encodes a sentence once into a
-depth-organised Transformer representation and reads it with lightweight aspect-specific readouts.
-Our work shares this single-pass goal; it differs in that the read-out operates on a recurrent
-\emph{matrix memory} of fixed size, and in that the aspect is given by its name, so that new
-aspects can be queried without new parameters.
+ABSA was popularised by the SemEval shared tasks \citep{pontiki2014semeval,pontiki2016semeval};
+\citet{zhang2023absasurvey} survey its many sub-tasks. Early neural models used aspect-conditioned
+attention over LSTM states \citep{wang2016atae} or memory networks that attend over word memories
+with the aspect as the query \citep{tang2016memnet}. With pretrained Transformers
+\citep{vaswani2017attention,devlin2019bert}, ABSA was often cast as sentence-pair classification with
+an auxiliary sentence built from the aspect \citep{sun2019auxiliary}, one pass per aspect. For
+predefined categories, \citet{schmitt2018joint} predict the presence and polarity of all categories
+jointly, and \citet{hu2019can} constrain attention so that the aspects of a sentence attend to
+different words.
 
-\subsection{xLSTM, linear attention and recurrent alternatives}
-xLSTM \citep{beck2024xlstm} extends the LSTM \citep{hochreiter1997lstm} with exponential gating and
-two new cells: the sLSTM, a scalar memory with memory mixing, and the mLSTM, a matrix memory with a
-covariance update rule. xLSTM 7B \citep{beck2025xlstm7b} scales the mLSTM to a large language model
-and introduces, among other changes, a soft-cap on the gate pre-activations that we adopt. The
-mLSTM is closely related to linear attention \citep{katharopoulos2020transformers} and to fast
-weight programmers \citep{schlag2021fastweights}, which also store key--value associations in a
-matrix that is read by queries. RWKV \citep{peng2023rwkv}, RetNet \citep{sun2023retnet} and
-state-space models such as Mamba \citep{gu2023mamba} are further recurrent alternatives to
-attention.
+\paragraph{Several aspects in one input.} TMM \citep{wu2020tmm} appends all aspect categories of a
+sentence, each preceded by a marker token, to a RoBERTa input, and classifies each category's
+sentiment from its marker state; categories are given (no detection), fixed (eight restaurant
+categories) and English. DABS \citep{xia2026dabs} encodes a sentence once and reads each given aspect
+term with a lightweight depth-selective readout over its span. Our input format is close to TMM's;
+we differ in detecting which of the candidate aspects are mentioned, in pooling over the whole name
+span rather than reading a marker token (we compare both in Section~\ref{sec:ablation}), in reading a
+recurrent memory with the pooled name, and in evaluating on unseen categories and aspect names.
 
-xLSTM has recently been applied to ABSA. AF-MAT \citep{lawan2025afmat} targets English benchmarks
-(SemEval-2014 and Twitter): the aspect representation gates the mLSTM memory updates, a
-flip-and-fuse block processes reversed sequences, and the final representation is mean-pooled over
-tokens for each sentence--aspect pair. GateMABSA \citep{lawan2025gatemabsa} uses specialised mLSTMs
-for multimodal (text and image) ABSA on English tweets. In both, the aspect \emph{modulates how the
-sequence is written} into memory, so each sentence--aspect pair needs its own pass. In our model the
-aspect is a \emph{query that reads} the finished memory, so one encoding serves all aspects. To our
-knowledge, no prior work answers aspects by querying the final mLSTM memory, and no prior xLSTM ABSA
-work covers Bangla or Banglish.
+\paragraph{Zero-shot and cross-lingual ABSA.} \citet{liu2021acsagen} cast ACSA as text generation
+with BART and report zero-shot transfer to unseen categories in English. Large language models do well
+on simple sentiment tasks but lag behind small in-domain models on structured tasks such as ABSA
+\citep{zhang2024llmsentiment}; \citet{ventirozos2025zeroshotacsa} prompt them for zero-shot ACSA in
+English, and \citet{fehle2026crosslingual} benchmark cross-lingual transfer for ABSA sub-tasks. We are
+not aware of zero-shot ACSA work for Bangla or for code-mixed text.
 
-\subsection{Sentiment analysis for Bangla and code-mixed text}
-Early Bangla ABSA datasets were small and covered only a few aspects
-\citep{rahman2018banglaabsa,masum2020banabsa}. Sentence-level Bangla sentiment has received more
-attention, including noisy social-media text \citep{islam2021sentnob} and the BLP-2023 shared task
-\citep{hasan2023blp}. BanglishRev \citep{shamael2024banglishrev} provides large-scale Bangla,
-English and code-mixed product reviews with ratings but without aspect labels, and the SentiMix
-shared task \citep{patwa2020sentimix} studied sentiment in Hindi--English and Spanish--English
-code-mixed tweets. Bangla-specific encoders such as BanglaBERT \citep{bhattacharjee2022banglabert}
-and multilingual encoders such as mBERT \citep{devlin2019bert} and XLM-R \citep{conneau2020xlmr} are
-the usual baselines. Two recent datasets make aspect-level work on Bangla possible at scale.
-EComReviews-BD \citep{haque2026ecomreviews} provides 20,685 Daraz reviews in Bangla, Banglish and
-English with aspect-level labels across 19 product categories, and reports fine-tuned Transformer
-baselines. BABSA \citep{rohman2025babsa} provides about 16k Bangla texts from many domains with
-aspect terms and their sentiment, annotated with high inter-annotator agreement (Cohen's
-$\kappa\geq0.84$); the release itself reports no model results, and we are not aware of published
-aspect-sentiment results on it.
+\subsection{Linear recurrent memories}
+Linear attention \citep{katharopoulos2020transformers} and fast weight programmers
+\citep{schlag2021fastweights} store a sequence as a sum of key--value outer products in a matrix that
+can be read by any query. The mLSTM of xLSTM \citep{beck2024xlstm,beck2025xlstm7b} adds exponential
+input and sigmoid forget gates to this additive update; RWKV \citep{peng2023rwkv}, RetNet
+\citep{sun2023retnet} and Mamba \citep{gu2023mamba,dao2024mamba2} are related recurrent alternatives.
+\citet{schlag2021fastweights} showed that a purely additive update cannot overwrite an association and
+proposed the \emph{delta rule}, which first removes the value currently stored under a key;
+\citet{yang2024deltanet} made it trainable in parallel, and Gated DeltaNet \citep{yang2025gdn} adds a
+data-dependent forget gate, combining fast erasure (gating) with targeted overwriting (delta rule).
+Gated DeltaNet was proposed for causal language modelling. We use it bidirectionally, read only its
+final state, and query that state with aspect-name embeddings.
+
+xLSTM has been applied to English ABSA: in AF-MAT \citep{lawan2025afmat} the aspect gates the mLSTM
+memory updates, and GateMABSA \citep{lawan2025gatemabsa} uses mLSTMs for multimodal ABSA. In both, the
+aspect modulates how the sequence is \emph{written}, so each sentence--aspect pair needs its own pass;
+in our model aspects \emph{read} a finished memory. We are not aware of delta-rule memories in ABSA, or
+of recurrent-memory ABSA for Bangla.
+
+\subsection{Bangla and code-mixed sentiment analysis}
+Early Bangla ABSA datasets were small \citep{rahman2018banglaabsa,masum2020banabsa}. Sentence-level
+Bangla sentiment has received more attention, including noisy social-media text
+\citep{islam2021sentnob} and the BLP-2023 shared task \citep{hasan2023blp}. BanglishRev
+\citep{shamael2024banglishrev} provides code-mixed product reviews with ratings but no aspect labels.
+BanglaBERT \citep{bhattacharjee2022banglabert}, mBERT \citep{devlin2019bert} and XLM-R
+\citep{conneau2020xlmr} are the usual encoders. EComReviews-BD \citep{haque2026ecomreviews} provides
+20,685 Daraz reviews in Bangla, Banglish and English with aspect labels across 19 product categories
+and reports fine-tuned Transformer baselines. BABSA \citep{rohman2025babsa} provides about 16k Bangla
+texts from many domains with aspect terms and their sentiment; the release reports no model results.
 
 % =========================================================================
 \section{Method}
@@ -204,140 +211,151 @@ aspect-sentiment results on it.
   mem/.style={box, fill=orange!18, minimum width=16mm, minimum height=12mm},
   head/.style={box, fill=green!12},
 ]
-  \node[enc] (txt) {category + review\\(Bangla / Banglish / English)};
-  \node[enc, below=6mm of txt] (xlmr) {frozen XLM-R\\(one pass)};
-  \node[rnn, right=8mm of xlmr] (pre) {[domain + script]\\prefix token};
-  \node[rnn, right=6mm of pre, minimum width=30mm] (bi) {bidirectional mLSTM\\$\times 2$ blocks};
-  \node[mem, right=8mm of bi] (C) {$\mathbf{C}_T,\mathbf{n}_T$\\(fwd, bwd)};
-  \node[box, fill=gray!8, below=8mm of pre] (g) {direct path\\$\mathbf{g}=\mathrm{MLP}(\mathrm{LN}[\mathbf{x}_{\langle s\rangle};\bar{\mathbf{x}}])$};
-  \node[enc, above=10mm of C] (asp) {aspect name $a$\\(``battery'')};
-  \node[rnn, right=6mm of asp] (q) {query MLP\\$\mathbf{q}_a$};
-  \node[head, right=10mm of C, yshift=7mm] (sent) {sentiment\\memory read $+$ direct};
-  \node[head, right=10mm of C, yshift=-9mm] (pres) {presence $p_a$\\memory read $+$ direct};
+  \node[enc, text width=62mm] (txt) {\texttt{<s>} Router : price $|$ range $|$ speed $|$ \dots\ \texttt{</s></s>} review \texttt{</s>}};
+  \node[enc, below=6mm of txt] (xlmr) {fine-tuned encoder\\(XLM-R / BanglaBERT, one pass)};
+  \node[rnn, right=10mm of xlmr] (pre) {[domain + script]\\prefix};
+  \node[rnn, right=6mm of pre, minimum width=30mm] (bi) {bidirectional\\Gated DeltaNet $\times 2$};
+  \node[mem, right=8mm of bi] (S) {$\mathbf{S}_T$\\(fwd, bwd)};
+  \node[rnn, above=10mm of S] (q) {span mean over\\name ``range''\\$\to\mathbf{q}_a$};
+  \node[box, fill=gray!8, below=8mm of pre] (g) {direct scorer\\$s_a(\mathbf{g},\mathbf{q}_a)$};
+  \node[head, right=10mm of S, yshift=7mm] (sent) {sentiment};
+  \node[head, right=10mm of S, yshift=-9mm] (pres) {presence $p_a$};
   \node[head, below=6mm of pres] (ov) {overall sentiment};
   \draw[->] (txt) -- (xlmr);
-  \draw[->] (xlmr) -- (pre);
+  \draw[->] (xlmr) -- node[above]{review} (pre);
   \draw[->] (pre) -- (bi);
-  \draw[->] (bi) -- node[above]{final} (C);
+  \draw[->] (bi) -- node[above]{final} (S);
+  \draw[->] (xlmr.north east) to[bend left=15] node[above, pos=0.5]{name spans} (q.west);
+  \draw[->] (q) -- node[right]{read} (S);
   \draw[->] (xlmr) |- (g);
-  \draw[->] (asp) -- (q);
-  \draw[->] (q) |- ($(C.north)+(0,3mm)$) -- node[left, pos=0.2]{read} (C.north);
-  \draw[->] (C.east) -- ++(4mm,0) |- (sent.west);
-  \draw[->] (C.east) -- ++(4mm,0) |- (pres.west);
+  \draw[->] (S.east) -- ++(4mm,0) |- (sent.west);
+  \draw[->] (S.east) -- ++(4mm,0) |- (pres.west);
   \draw[->] (g.east) -| ($(pres.south west)+(2mm,0)$);
   \draw[->] (sent.east) -- ++(3mm,0) |- (ov.east);
   \draw[->] (pres.south) -- (ov.north);
 \end{tikzpicture}}
-\caption{Overview of \quam{}. A review is encoded once together with its product category; every
-aspect of the category is answered by a query into the final mLSTM matrix memory (one $O(d^2)$ read
-per aspect, independent of review length), added to a per-aspect score on the pooled encoder states
-$\mathbf{g}$ (a learned row for each known aspect plus a part computed from the aspect name).}
+\caption{Overview of \quam{}. The category and all its candidate aspect names are written into the
+first segment, so the encoder reads names and review jointly in one pass. Each aspect's query is the
+mean of the encoder states over its own name span. It reads the final state of a bidirectional Gated
+DeltaNet over the review, and is also scored by a direct per-aspect scorer on pooled encoder states;
+both scores are added.}
 \label{fig:model}
 \end{figure}
 
 \subsection{Task definition}
-A review $x$ belongs to a product category (domain) $c$ with aspect inventory $\mathcal{A}_c$. For
-every $a\in\mathcal{A}_c$ the model predicts whether $a$ is mentioned (presence) and, if so, its
-polarity; it also predicts the overall sentiment of the review (positive, neutral or negative). On
-BABSA the aspects are given terms, and the task is their three-class sentiment. Figure~\ref{fig:model}
-gives an overview of the model.
+A review $x$ belongs to a product category $c$ with aspect inventory $\mathcal{A}_c$. For every
+$a\in\mathcal{A}_c$ the model predicts whether $a$ is mentioned (presence) and, if so, its polarity;
+it also predicts the overall sentiment of the review (positive, neutral, negative). On BABSA the
+aspects are given terms and the task is their three-class sentiment. Figure~\ref{fig:model} gives an
+overview.
 
-\subsection{Input encoding}
-Each review is encoded once by a frozen XLM-R base \citep{conneau2020xlmr} as the sentence pair
-(category name, review), i.e.\ \texttt{<s>} category \texttt{</s></s>} review \texttt{</s>}, so that
-every token state is conditioned on the product category. Since every review belongs to exactly one
-category, this is still a single encoder pass per review. Aspect names (e.g.\ \textit{click
-buttons}) and category names are encoded by the same model and mean-pooled over their tokens. All
-encoder outputs are computed once and cached, so training never runs the encoder.
+\subsection{Aspect-prompted encoding}
+The encoder input is
+\[
+\texttt{<s>}\ c\ \texttt{:}\ a_1\ \texttt{|}\ a_2\ \texttt{|}\ \dots\ \texttt{|}\ a_{|\mathcal{A}_c|}\ \texttt{</s></s>}\ x\ \texttt{</s>},
+\]
+i.e.\ the category name and all its candidate aspect names (on average about 13) form the first
+segment. Every review is still encoded once, and self-attention lets each name attend to the review
+and the review to the names. On BABSA, whose texts have one to a few gold aspect terms, the candidate
+list consists of the gold terms plus three terms sampled from other training texts that do not occur
+in the text (negatives for presence); its order is shuffled per text and epoch, so that the position of
+a term does not reveal whether it is gold.
 
-XLM-R has a few outlier (``rogue'') feature dimensions \citep{timkey2021rogue}. In our data one
-feature has mean 17.9 while the typical feature standard deviation is 0.08, which makes all aspect
-embeddings nearly parallel (mean pairwise cosine 0.989). We therefore z-score every feature with
-statistics from the training cache before the recurrent layers and the query network; without this
-the presence head did not learn at all. A learned prefix token, the sum of a projection of the
-category embedding and an embedding of the detected script (Bangla, English, Banglish, mixed), is
-prepended to the token sequence.
+Let $\mathbf{h}_1,\dots,\mathbf{h}_n$ be the final encoder states and $\mathcal{S}_a$ the token
+positions of the name $a$ in the first segment. The aspect query is the layer-normalised mean over the
+name span,
+\begin{equation}
+\mathbf{q}_a = \mathrm{LN}\Big(\tfrac{1}{|\mathcal{S}_a|}\textstyle\sum_{i\in\mathcal{S}_a}\mathbf{h}_i\Big).
+\label{eq:query}
+\end{equation}
+Because $\mathbf{q}_a$ is computed from the name's tokens in context, an aspect name never seen in
+training is handled exactly like a known one. As an alternative we test the state of the separator
+token before each name (TMM-style marker read-out; Section~\ref{sec:ablation}).
 
-\subsection{Bidirectional mLSTM}
-The token sequence is projected to width $d{=}256$ and processed by $L{=}2$ pre-norm residual mLSTM
-blocks \citep{beck2024xlstm} with up-projection to 512 and 4 heads of size 128. Each block is run
-left-to-right and right-to-left. For one direction and head, with input gate $i_t$ (exponential)
-and forget gate $f_t$ (sigmoid, computed in log space), the memory update is
-\begin{align}
-\mathbf{C}_t &= f_t\,\mathbf{C}_{t-1} + i_t\,\mathbf{v}_t\mathbf{k}_t^\top, &
-\mathbf{n}_t &= f_t\,\mathbf{n}_{t-1} + i_t\,\mathbf{k}_t ,
-\end{align}
-computed in the stabilised parallel form with a running log-scale $m_t$. We soft-cap the gate
-pre-activations with $15\tanh(\cdot/15)$, as in xLSTM 7B \citep{beck2025xlstm7b}; without it,
-$e^{-m}$ overflowed and almost all batches produced non-finite gradients. Our implementation matches
-the official parallel kernel to $9\times10^{-16}$ in double precision.
+The encoder is fine-tuned (learning rate $2\times10^{-5}$) with frozen word embeddings and gradient
+checkpointing \citep{chen2016checkpointing} so that it fits into 4\,GB. We use XLM-R base
+\citep{conneau2020xlmr} for EComReviews-BD and BanglaBERT \citep{bhattacharjee2022banglabert} or XLM-R
+for BABSA.
+
+\subsection{Bidirectional Gated DeltaNet memory}
+The review states (the second segment) are projected to width $d{=}256$, a learned prefix token (the
+sum of a projection of the frozen category embedding and an embedding of the detected script:
+Bangla, English, Banglish, mixed) is prepended, and the sequence is processed by $L{=}2$ pre-norm
+residual blocks. Each block up-projects to 512 dimensions, splits them into 4 heads of size 128, and
+runs a Gated DeltaNet cell \citep{yang2025gdn} left-to-right and another one right-to-left; the two
+outputs are summed and gated by a SiLU branch, as in mLSTM blocks \citep{beck2024xlstm}. Per head and
+direction, with L2-normalised keys $\mathbf{k}_t$ and queries (from a causal convolution and SiLU),
+values $\mathbf{v}_t$, write strength $\beta_t=\sigma(\mathbf{w}_\beta^\top\mathbf{x}_t)\in(0,1)$ and
+decay $\alpha_t=\sigma(\mathbf{w}_\alpha^\top\mathbf{x}_t+b_\alpha)\in(0,1)$, the state
+$\mathbf{S}_t\in\mathbb{R}^{128\times128}$ is updated by the gated delta rule
+\begin{equation}
+\mathbf{S}_t = \alpha_t\,\mathbf{S}_{t-1}\big(\mathbf{I}-\beta_t\mathbf{k}_t\mathbf{k}_t^\top\big) + \beta_t\,\mathbf{k}_t\mathbf{v}_t^\top
+\quad\Longleftrightarrow\quad
+\mathbf{S}_t = \alpha_t\mathbf{S}_{t-1} + \beta_t\,\mathbf{k}_t\big(\mathbf{v}_t - \alpha_t\mathbf{S}_{t-1}^\top\mathbf{k}_t\big)^\top .
+\label{eq:gdn}
+\end{equation}
+The right-hand form shows the difference to the additive mLSTM update
+$\mathbf{C}_t=f_t\mathbf{C}_{t-1}+i_t\mathbf{v}_t\mathbf{k}_t^\top$: the delta rule writes only the
+\emph{correction} between the new value and what the memory currently returns for $\mathbf{k}_t$. If a
+review mentions an aspect twice, or praises it and then complains about it, the second mention
+overwrites the first association instead of being summed with it.
+
+\paragraph{Adaptations.} We made four changes to the published model, which targets causal language
+modelling. (i) The memory runs in both directions and only the final states of the last block,
+$\mathbf{S}^{\rightarrow}_T$ and $\mathbf{S}^{\leftarrow}_T$, are used for aspects. (ii) The final state
+is read by external aspect queries (next subsection) rather than by the sequence's own queries. (iii)
+The decay bias $b_\alpha$ is initialised to $3,\dots,6$ across heads (slow forgetting, $\alpha\approx
+0.95$--$0.998$), so that a short review is retained in full at the start of training. (iv) Padding
+steps get $\beta=0$ and $\alpha=1$, so that the final state is the state after the last real token. We
+implement the chunkwise-parallel form with the WY representation (chunks of 64 tokens, triangular
+solve) in plain PyTorch, without pretrained weights; it matches a step-by-step reference
+implementation to $5\times10^{-7}$.
 
 \subsection{Querying the memory with the aspect name}
-After the last block we keep only $(\mathbf{C}_T,\mathbf{n}_T,m_T)$ of both directions. Each aspect
-is mapped to a query $\mathbf{q}_a$ per head and direction by an MLP over its standardised name
-embedding, and read exactly as the mLSTM reads at its own output step:
-\begin{align}
-\mathbf{r}_a &= \frac{\mathbf{C}_T\,\mathbf{q}_a}{\max\!\big(|\mathbf{n}_T^\top\mathbf{q}_a|,\,e^{-m_T}\big)},\\
-\mu_a &= \log\!\big(|\mathbf{n}_T^\top\mathbf{q}_a| + e^{-m_T}\big) + m_T .
-\end{align}
-$\mathbf{r}_a$ is the value retrieved under key $\mathbf{q}_a$. $\mu_a$ equals
-$\log(|\tilde{\mathbf{n}}_T^\top\mathbf{q}_a|+1)$ for the un-stabilised normaliser
-$\tilde{\mathbf{n}}_T$, i.e.\ it measures how much key mass the review wrote in the direction of the
-aspect; it is independent of the stabiliser and has a bounded gradient at
-$\mathbf{n}^\top\mathbf{q}=0$. Reads from all heads and both directions are concatenated
-($\mathbf{r}_a\in\mathbb{R}^{1024}$, $\bm{\mu}_a\in\mathbb{R}^{8}$, plus the log review length).
-The memory per review is $2\times4\times128\times129 = 132{,}096$ numbers, independent of the review
-length and of the number of aspects asked.
-
-From the read, the sentiment logits are $\mathrm{MLP}_s(\mathrm{LN}(\mathbf{r}_a))$ and the presence
-logit is $\mathrm{MLP}_p([\bm{\mu}_a;\mathbf{r}_a;\mathbf{u}_a])$, where
-$\mathbf{u}_a=\mathrm{LN}(\mathbf{W}[\bar{\mathbf{h}};\mathbf{q}_a])$ adds the mean
-$\bar{\mathbf{h}}$ of the final mLSTM token states. For EComReviews-BD, which has no neutral aspect
-labels, the neutral logit is masked.
-
-\subsection{Direct path with per-aspect scores}
-A strong frozen-encoder classifier (Section~\ref{sec:setup}) owes much of its accuracy to two things
-that the memory read lacks: the full 768-dimensional encoder states, and a separate output weight for
-each aspect. We therefore add a direct path. The raw encoder states of the \texttt{<s>} token and
-their mean over the sequence give
+An MLP maps each aspect query $\mathbf{q}_a$ (Equation~\ref{eq:query}) to one L2-normalised query
+$\hat{\mathbf{q}}$ per head and direction, which reads the final state:
 \begin{equation}
-\mathbf{g}=\mathrm{GELU}\big(\mathbf{W}_g\,\mathrm{LN}([\mathbf{x}_{\langle s\rangle};\bar{\mathbf{x}}])\big)\in\mathbb{R}^{1024},
+\mathbf{r}_a = \mathbf{S}_T^\top\hat{\mathbf{q}}_a ,\qquad \mu_a = \log\big(1+\|\mathbf{r}_a\|\big).
+\label{eq:read}
 \end{equation}
+$\mathbf{r}_a$ is the value stored under key $\hat{\mathbf{q}}_a$; its norm $\mu_a$ measures how much
+the review wrote in the direction of the aspect and serves as a mention signal. Reads of all heads and
+both directions are concatenated ($\mathbf{r}_a\in\mathbb{R}^{1024}$, $\bm{\mu}_a\in\mathbb{R}^{8}$,
+plus the log review length). The memory per review has $2\times4\times128\times128=131{,}072$ entries,
+independent of the review length and of the number of aspects asked. The memory-based sentiment
+logits are $\mathrm{MLP}_s(\mathrm{LN}(\mathbf{r}_a))$ and the presence logit is
+$\mathrm{MLP}_p([\bm{\mu}_a;\mathbf{r}_a;\mathbf{u}_a])$, where
+$\mathbf{u}_a=\mathrm{LN}(\mathbf{W}[\bar{\mathbf{z}};\hat{\mathbf{q}}_a])$ adds the mean
+$\bar{\mathbf{z}}$ of the final memory token states.
+
+\subsection{Direct per-aspect scorer}
+In parallel, the encoder states of the \texttt{<s>} token and their mean give
+$\mathbf{g}=\mathrm{GELU}(\mathbf{W}_g\,\mathrm{LN}([\mathbf{h}_{\langle s\rangle};\bar{\mathbf{h}}]))\in\mathbb{R}^{1024}$,
 and each aspect is scored as
 \begin{equation}
-s_a = \mathbf{e}_{\mathrm{id}(a)}^\top\mathbf{g} + \mathrm{MLP}([\mathbf{g};\mathbf{q}^{\mathrm{std}}_a]),
+s_a = \mathbf{e}_{\mathrm{id}(a)}^\top\mathbf{g} + \mathrm{MLP}([\mathbf{g};\mathbf{q}_a]),
 \label{eq:direct}
 \end{equation}
-with one such scorer for presence and one with three outputs for sentiment. $\mathbf{e}$ holds a
-learned row for each of the 74 aspect names of EComReviews-BD, initialised to zero. An aspect name
-that does not occur in training, or a BABSA aspect term, has the all-zero row and is scored by the
-name-conditioned part alone. During training we replace the aspect id by the unknown id with
-probability 0.2, so that the name-conditioned part stays useful. The direct scores are added to the
-memory-read logits, and a linear map of $\mathbf{g}$ is added to the overall logits.
+with one scorer for presence and one with three outputs for sentiment. $\mathbf{e}$ holds a learned
+row for each of the 74 aspect names of EComReviews-BD, initialised to zero; an aspect name that does
+not occur in training, and every BABSA term, has the all-zero row and is scored by the name-conditioned
+part alone. During training the aspect id is replaced by the unknown id with probability 0.2, so that
+the name-conditioned part stays useful. The direct scores are added to the memory logits. For
+EComReviews-BD, which has no neutral aspect labels, the neutral logit is masked.
 
-\subsection{Overall sentiment}
+\subsection{Overall sentiment, objective and cost}
 Each aspect receives a learned importance $w_a=\mathrm{softplus}(h([\mathbf{a};\mathbf{c}]))\,p_a$,
-conditioned on the aspect and the category and weighted by its presence probability $p_a$. The
-overall logits are
-\begin{equation}
-\mathrm{MLP}_o\Big(\sum_a w_a P_a^{+},\ \sum_a w_a P_a^{-},\ \sum_a w_a P_a^{0},\ \sum_a w_a\Big)
-+\mathrm{MLP}_m(\mathbf{r}_{\textit{overall}}) + \mathbf{W}_o\mathbf{g},
-\end{equation}
-where $P_a$ are the aspect sentiment probabilities and $\mathbf{r}_{\textit{overall}}$ reads the
-memory with the query ``overall opinion''.
+weighted by its presence probability $p_a$; the overall logits are an MLP over the importance-weighted
+sums of the aspect sentiment probabilities, plus a memory read with the query ``overall opinion'' and a
+linear map of $\mathbf{g}$. The loss is binary cross-entropy for presence over all candidate aspects,
+cross-entropy for aspect sentiment on mentioned aspects, and $0.5\times$ cross-entropy for overall
+sentiment.
 
-\subsection{Training objective}
-The loss is binary cross-entropy for presence over all aspects of the category, cross-entropy for
-aspect sentiment on mentioned aspects, and $0.5\times$ cross-entropy for overall sentiment. BABSA only
-annotates mentioned aspects, so for each review we add three aspect terms sampled from other
-training reviews that do not occur in the text as negatives for presence.
-
-\subsection{Cost}
-A sentence-pair classifier \citep{sun2019auxiliary} encodes a review once per aspect, i.e.\
-$|\mathcal{A}_c|$ encoder passes (about 13 on average in our test sets). \quam{} needs one encoder
-pass per review, which can be cached, followed by one $O(d^2)$ memory read and one small scorer per
-aspect. The fine-tuned baselines in Section~\ref{sec:setup} also need only one pass, because they
-have an output row per aspect, but this ties them to a closed aspect inventory.
+A sentence-pair classifier \citep{sun2019auxiliary} needs $|\mathcal{A}_c|$ encoder passes per
+review. \quam{} needs one pass over a longer input (the names add on average about 40 tokens to a
+median review of 8 words), one $O(d^2)$ memory read and one small scorer per aspect. The fine-tuned
+baselines also need one pass, because they have an output row per aspect, but this ties them to a
+closed inventory.
 
 % =========================================================================
 \section{Datasets and Splits}
@@ -372,48 +390,43 @@ aspects).}
 EComReviews-BD \citep{haque2026ecomreviews} contains 20,685 Daraz reviews from 19 product categories
 (Table~\ref{tab:data}). Each review carries a label in $\{-1,0,1\}$ for every aspect of its category,
 where 0 means not mentioned; 91\% of the 267,948 (review, aspect) cells are not mentioned, and 26\% of
-the mentioned aspects are negative. The aspect inventory has 74 distinct names; 42 of them occur in a
-single category only. The dataset also contains NLLB \citep{nllb2022} English translations, aligned
-for 19,943 reviews, which we use only in one ablation. We normalise text to Unicode NFC and detect the
-script of each review from its characters.
+the mentioned aspects are negative. The inventory has 74 distinct aspect names; 42 of them occur in a
+single category only. We normalise text to Unicode NFC and detect the script of each review from its
+characters.
 
 \paragraph{Official split and train--test overlap.}
 The official split (70/15/15, \texttt{random\_state}=42) is reproduced following the dataset
-description. We use the published ratio, random seed and split sizes (14,479 / 3,103 / 3,103);
-because the order in which the 19 category files are concatenated before splitting is not
-specified, our test set may not contain exactly the same reviews as in the original paper. All
-systems in our tables use our splits. We found that 358 of the 3,103 test texts (11.5\%) also occur in
-the training set. They are mostly short generic reviews (median length two words, e.g.\ ``good
-product''), so a model can score them by memorising training labels.
+description with the published ratio, seed and sizes (14,479 / 3,103 / 3,103); because the order in
+which the 19 category files are concatenated before splitting is not specified, our test set may not
+contain exactly the same reviews as the original. All systems in our tables use our splits. 358 of the
+3,103 test texts (11.5\%) also occur in the training set; they are mostly short generic reviews (median
+two words, e.g.\ ``good product'').
 
 \paragraph{Grouped split.} We therefore also use a grouped split of the same sizes in which identical
 normalised texts never cross split boundaries.
 
-\paragraph{Zero-shot split.} To test generalisation to new product categories, the test set of the
-zero-shot split consists of four categories never seen in training (Router, WebCam, Mini\_Printer and
-CC\_Camera; 2,637 test reviews with 2,750 mentioned aspects, and 17,510 / 538 reviews for training
-and validation). 18 of their aspect names never occur in
-training, and these account for 956 of the 2,750 test mentions; the remaining aspect names (e.g.\
-\textit{price}, \textit{quality}) also occur in other categories.
+\paragraph{Zero-shot split.} The test set of the zero-shot split consists of four categories never
+seen in training (Router, WebCam, Mini\_Printer and CC\_Camera; 2,637 test reviews with 2,750 mentioned
+aspects; 17,510 / 538 reviews for training and validation). 18 of their aspect names never occur in
+training and account for 956 of the 2,750 test mentions; the other names (e.g.\ \textit{price},
+\textit{quality}) also occur in other categories.
 
 \subsection{BABSA}
 BABSA \citep{rohman2025babsa} contains Bangla texts from 21 domains (book reviews, politics, religion,
-food, \dots) with aspect terms and their three-class sentiment. We merge duplicate rows per text,
-which gives 14,099 texts with 16,968 (text, term) pairs, and drop 43 conflicting aspect labels. 20\% of
-the aspect terms do not occur verbatim in the text (implicit aspects). The release is sorted by label,
-so shuffling before splitting is essential; we create a grouped 70/15/15 split stratified by domain
-and label.
+food, \dots) with aspect terms and their three-class sentiment. Merging duplicate rows per text gives
+14,099 texts with 16,968 (text, term) pairs; we drop 43 conflicting labels. The release is sorted by
+label, so we shuffle before creating a grouped 70/15/15 split stratified by domain and label.
 
 \subsection{Evaluation metrics}
-Following \citet{haque2026ecomreviews}, the main metric on EComReviews-BD is \emph{strict pair}
-precision, recall and F1: a prediction counts as correct only if a mentioned aspect is detected
-\emph{and} its polarity is right. The original paper does not state how these scores are averaged; we
-use micro-averaging over all (review, aspect) pairs. We also report detection F1, macro-F1 of
-detection over aspect names (which weights rare aspects equally), polarity accuracy on gold-mentioned
-aspects, and overall-sentiment macro-F1. For every system, the presence threshold is chosen on the
-validation set from $\{0.05,0.10,\dots,0.95\}$ and applied unchanged to the test set. On BABSA we
-report three-class sentiment accuracy and macro-F1 over gold aspect terms, separately for verbatim
-and implicit terms.
+Following \citet{haque2026ecomreviews}, the main metric on EComReviews-BD is \emph{strict pair} F1: a
+prediction is correct only if a mentioned aspect is detected \emph{and} its polarity is right. We use
+micro-averaging over all (review, aspect) pairs. We also report pair precision and recall, detection
+F1, detection macro-F1 over aspect names (which weights rare aspects equally), polarity accuracy on
+gold-mentioned aspects, and overall-sentiment macro-F1. For every system the presence threshold is
+chosen on validation from $\{0.05,0.10,\dots,0.95\}$ and applied unchanged to test. On BABSA we report
+three-class accuracy and macro-F1 over gold aspect terms, also separately for verbatim and implicit
+terms. We do not report presence scores on BABSA, because its negative terms are sampled from other
+texts and are therefore easy to reject.
 
 % =========================================================================
 \section{Experimental Setup}
@@ -421,61 +434,53 @@ and implicit terms.
 
 \begin{table}[t]
 \centering\small
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
- & \quam{} & fine-tuned encoders & frozen encoder + MLP \\
+ & \quam{} & fine-tuned baselines \\
 \midrule
-encoder & XLM-R base, frozen & BanglaBERT / XLM-R base & BanglaBERT / XLM-R base, frozen \\
-input & (category, review) & (category, review) & (category, review) \\
-trainable parameters & 10.0M & 110M / 86M$^\ast$ & 1.8M \\
-optimiser & AdamW & AdamW & AdamW \\
-learning rate & $10^{-3}$ & $2\times10^{-5}$ & $10^{-3}$ \\
-weight decay & 0.05 & 0.01 & 0.01 \\
-schedule & 5\% warm-up, cosine & 10\% warm-up, linear & 10\% warm-up, linear \\
-batch size & 32 & 16 & 16 \\
-epochs & 15 & $\leq$10 (patience 3) & $\leq$15 (patience 4) \\
-model selection & best validation pair F1 & best validation pair F1 & best validation pair F1 \\
-time per run (RTX 2050) & $\approx$12 min & $\approx$30 / 40 min & $\approx$10 min \\
+encoder & XLM-R base / BanglaBERT, fine-tuned & XLM-R base / BanglaBERT, fine-tuned \\
+input & category : aspect names \texttt{</s></s>} review & (category, review) \\
+trainable parameters & 86M encoder$^\ast$ + 10M head & 86M$^\ast$ (XLM-R) / 110M (BanglaBERT) \\
+learning rate & $2\times10^{-5}$ encoder, $10^{-3}$ head & $2\times10^{-5}$ \\
+weight decay & 0.01 encoder, 0.05 head & 0.01 \\
+schedule & 10\% warm-up, linear decay & 10\% warm-up, linear decay \\
+batch & 16 reviews, $\leq$2,048 tokens per micro-batch & 16 \\
+epochs & $\leq$10 (patience 3) & $\leq$10 (patience 3) \\
+model selection & best validation pair F1 & best validation pair F1 \\
+time per run (RTX 2050) & $\approx$35--60 min & $\approx$30 / 40 min \\
 \bottomrule
 \end{tabular}
 \caption{Training configurations on EComReviews-BD. All systems use the same losses (presence BCE,
-sentiment CE, $0.5\times$ overall CE), bf16 autocast, gradient clipping at 1.0, maximum 256 tokens, and
-the same validation-based threshold selection. $^\ast$XLM-R with frozen word embeddings and gradient
-checkpointing to fit into 4\,GB.}
+sentiment CE, $0.5\times$ overall CE), bf16 autocast, gradient clipping at 1.0, at most 256 tokens,
+and the same validation-based threshold selection. $^\ast$XLM-R with frozen word embeddings and
+gradient checkpointing to fit into 4\,GB. The Gated DeltaNet memory has 4.0M of the 10M head
+parameters.}
 \label{tab:setup}
 \end{table}
 
-\paragraph{\quam{}.} Table~\ref{tab:setup} lists the training configuration. Dropout is 0.1. XLM-R
-states are pre-computed once with a maximum of 256 tokens (24 texts are truncated), so a run takes
-about 12 minutes on a single RTX 2050 laptop GPU with 4\,GB of memory (peak 1.9\,GB). We do not use
-early stopping, because memory-based detection can start slowly (Section~\ref{sec:ablation}); the
-epoch with the best validation pair F1 is selected.
+\paragraph{\quam{}.} Table~\ref{tab:setup} lists the configuration. Dropout is 0.1. Long batches are
+split into micro-batches of at most 2,048 tokens with gradient accumulation; peak GPU memory is
+2.9\,GB on an RTX 2050 laptop GPU with 4\,GB.
 
-\paragraph{Fine-tuned encoders.} BanglaBERT \citep{bhattacharjee2022banglabert} and XLM-R base
-\citep{conneau2020xlmr} encode the pair (category, review). The \texttt{[CLS]} state feeds one
-presence logit and one polarity pair per aspect (74 output rows) and a three-way overall head, trained
-with the same losses as \quam{}. The learning rate of $2\times10^{-5}$ follows
-\citet{haque2026ecomreviews}. To fit XLM-R into 4\,GB we freeze its word embeddings (86M of its 278M
-parameters remain trainable) and use gradient checkpointing, which changes memory use but not the
-computation. BanglaBERT is used with our NFC-normalised text but without its own normaliser.
+\paragraph{Fine-tuned baselines.} BanglaBERT and XLM-R base encode the pair (category, review). The
+\texttt{[CLS]} state feeds one presence logit and one polarity pair per aspect (74 output rows) and a
+three-way overall head, trained with the same losses. The learning rate follows
+\citet{haque2026ecomreviews}. XLM-R is trained with frozen word embeddings and gradient checkpointing,
+as in \quam{}. On BABSA, the baselines classify the pair (aspect term, text) into three classes from the
+\texttt{[CLS]} state (up to 5 epochs, patience 2), selected by validation macro-F1.
 
-\paragraph{Frozen-encoder classifier.} This baseline feeds
-$\mathrm{LN}([\mathbf{x}_{\texttt{[CLS]}};\bar{\mathbf{x}}])$ of the frozen encoder through a 1024-unit
-GELU layer to the same heads. It isolates what a simple head achieves on the same frozen features that
-\quam{} uses.
+\paragraph{Additional reference systems.} We include two frozen-encoder systems from our earlier work:
+a frozen XLM-R with an MLP head on $\mathrm{LN}([\mathbf{x}_{\texttt{[CLS]}};\bar{\mathbf{x}}])$, and
+QuAM-xLSTM-frozen, a version of our model without the aspect prompt, on cached frozen XLM-R states and
+with an xLSTM memory.
 
-\paragraph{BABSA baselines.} On BABSA the baselines classify the pair (aspect term, text) into three
-classes from the \texttt{[CLS]} state (fine-tuned: up to 5 epochs, patience 2) or from the frozen
-features through the same MLP (up to 15 epochs, patience 4), selected by validation macro-F1.
-
-\paragraph{Seeds, ensembles and significance.} We report mean $\pm$ sample standard deviation over
-three seeds (42, 1, 2) unless marked otherwise; because of compute limits, fine-tuned XLM-R and frozen
-BanglaBERT were run with one seed. A \emph{seed ensemble} of \quam{} averages the three models'
-probabilities \citep{lakshminarayanan2017ensembles}, with its threshold re-chosen on validation.
-Differences in pair F1 are tested with a paired bootstrap over test reviews: we resample the 3,103
-test reviews with replacement 10,000 times, compute the seed-averaged pair F1 of both systems on each
-sample (2,637 reviews on the zero-shot split), and report the mean difference, its 95\% percentile interval and the fraction of samples in
-which \quam{} is not better ($p$).
+\paragraph{Seeds and significance.} We report mean $\pm$ sample standard deviation over three seeds
+(42, 1, 2) unless marked; because of compute limits, fine-tuned XLM-R and a few ablations were run with
+one or two seeds. Differences are tested with a paired bootstrap over test reviews: we resample the test
+reviews with replacement 10,000 times (2,000 for the memory comparisons), compute the seed-averaged
+statistic of both systems on each sample, and report the mean difference, its 95\% percentile interval
+and the fraction of samples in which the first system is not better ($p$). The test captures test-set
+sampling but not training variance across seeds.
 
 % =========================================================================
 \section{Results}
@@ -483,40 +488,39 @@ which \quam{} is not better ($p$).
 
 \begin{table}[p]
 \centering\footnotesize
-\setlength{\tabcolsep}{3.5pt}
+\setlength{\tabcolsep}{3.2pt}
 \begin{tabular}{llrccccccc}
 \toprule
 split & model & trainable & pair P & pair R & \textbf{pair F1} & det.\ F1 & det.\ mF1 & pol.\ acc & overall F1 \\
 \midrule
-\multirow{8}{*}{official}
+\multirow{7}{*}{official}
  & BanglaBERT, reported$^\dagger$       & 110M & 31.8 & 77.1 & 45.0 & -- & -- & -- & -- \\
  & BanglaBERT, fine-tuned               & 110M & \pmstd{62.4}{1.9} & \pmstd{54.0}{1.1} & \pmstd{57.9}{0.3} & \pmstd{62.1}{0.3} & \pmstd{15.4}{0.5} & \pmstd{89.4}{0.4} & \pmstd{78.4}{0.7} \\
- & XLM-R, fine-tuned$^1$                & 86M  & 67.7 & 57.3 & \textbf{62.1} & 67.5 & 17.2 & 89.2 & 78.1 \\
- & BanglaBERT, frozen + MLP$^1$         & 1.8M & 47.5 & 46.3 & 46.9 & 52.0 & 20.6 & 86.3 & 67.4 \\
+ & XLM-R, fine-tuned$^1$                & 86M  & 67.7 & 57.3 & 62.1 & 67.5 & 17.2 & 89.2 & 78.1 \\
  & XLM-R, frozen + MLP                  & 1.8M & \pmstd{60.4}{1.6} & \pmstd{56.8}{1.3} & \pmstd{58.6}{0.4} & \pmstd{66.3}{0.4} & \pmstd{35.4}{0.9} & \pmstd{85.8}{0.3} & \pmstd{67.5}{0.1} \\
- & \quam{}                              & 10M  & \pmstd{59.4}{0.5} & \pmstd{56.8}{2.2} & \pmstd{58.0}{0.9} & \pmstd{64.9}{1.1} & \pmstd{32.4}{2.4} & \pmstd{87.1}{0.2} & \pmstd{70.6}{0.7} \\
- & \quam{}, 3-seed ensemble             & 30M  & 59.4 & 58.9 & 59.2 & 65.9 & 34.1 & 87.7 & 71.6 \\
+ & QuAM-xLSTM-frozen                    & 10M  & \pmstd{59.4}{0.5} & \pmstd{56.8}{2.2} & \pmstd{58.0}{0.9} & \pmstd{64.9}{1.1} & \pmstd{32.4}{2.4} & \pmstd{87.1}{0.2} & \pmstd{70.6}{0.7} \\
+ & \textbf{\quam{} (ours)}              & 96M  & \textbf{\pmstd{72.3}{1.4}} & \textbf{\pmstd{73.1}{0.9}} & \textbf{\pmstd{72.7}{0.3}} & \textbf{\pmstd{78.6}{0.1}} & \textbf{\pmstd{61.1}{2.0}} & \textbf{\pmstd{90.5}{0.2}} & \textbf{\pmstd{78.7}{0.4}} \\
 \midrule
 \multirow{5}{*}{grouped}
- & BanglaBERT, fine-tuned               & 110M & \pmstd{61.4}{2.5} & \pmstd{54.9}{1.6} & \pmstd{58.0}{0.6} & \pmstd{61.8}{0.5} & \pmstd{17.4}{0.6} & \pmstd{90.1}{0.1} & \pmstd{77.5}{0.7} \\
- & XLM-R, fine-tuned$^1$                & 86M  & 63.9 & 60.1 & \textbf{61.9} & 66.9 & 21.3 & 88.8 & 76.2 \\
+ & BanglaBERT, fine-tuned               & 110M & \pmstd{61.4}{2.5} & \pmstd{54.9}{1.6} & \pmstd{58.0}{0.6} & \pmstd{61.8}{0.5} & \pmstd{17.4}{0.6} & \textbf{\pmstd{90.1}{0.1}} & \pmstd{77.5}{0.7} \\
+ & XLM-R, fine-tuned$^1$                & 86M  & 63.9 & 60.1 & 61.9 & 66.9 & 21.3 & 88.8 & 76.2 \\
  & XLM-R, frozen + MLP                  & 1.8M & \pmstd{58.0}{2.4} & \pmstd{56.3}{2.1} & \pmstd{57.1}{0.1} & \pmstd{65.2}{0.1} & \pmstd{34.2}{1.6} & \pmstd{85.7}{0.3} & \pmstd{64.9}{0.4} \\
- & \quam{}                              & 10M  & \pmstd{59.0}{0.6} & \pmstd{52.6}{1.1} & \pmstd{55.6}{0.3} & \pmstd{62.8}{0.2} & \pmstd{28.6}{1.1} & \pmstd{86.4}{0.2} & \pmstd{69.2}{1.4} \\
- & \quam{}, ensemble                    & 30M  & 61.0 & 51.8 & 56.0 & 63.2 & 27.9 & 87.0 & 70.9 \\
+ & QuAM-xLSTM-frozen                    & 10M  & \pmstd{59.0}{0.6} & \pmstd{52.6}{1.1} & \pmstd{55.6}{0.3} & \pmstd{62.8}{0.2} & \pmstd{28.6}{1.1} & \pmstd{86.4}{0.2} & \pmstd{69.2}{1.4} \\
+ & \textbf{\quam{} (ours)}              & 96M  & \textbf{\pmstd{70.9}{1.7}} & \textbf{\pmstd{71.6}{1.5}} & \textbf{\pmstd{71.2}{0.4}} & \textbf{\pmstd{77.4}{0.6}} & \textbf{\pmstd{60.7}{1.4}} & \pmstd{89.9}{0.2} & \textbf{\pmstd{77.9}{0.2}} \\
 \midrule
 \multirow{5}{*}{zero-shot}
- & BanglaBERT, fine-tuned               & 110M & \pmstd{70.6}{5.9} & \pmstd{26.9}{1.4} & \pmstd{38.9}{0.7} & \pmstd{41.8}{1.0} & \pmstd{13.3}{1.0} & \pmstd{74.4}{0.9} & \textbf{\pmstd{63.3}{0.6}} \\
+ & BanglaBERT, fine-tuned               & 110M & \textbf{\pmstd{70.6}{5.9}} & \pmstd{26.9}{1.4} & \pmstd{38.9}{0.7} & \pmstd{41.8}{1.0} & \pmstd{13.3}{1.0} & \pmstd{74.4}{0.9} & \pmstd{63.3}{0.6} \\
  & XLM-R, fine-tuned$^1$                & 86M  & 21.0 & 39.4 & 27.4 & 31.7 & 21.4 & 72.1 & 63.0 \\
  & XLM-R, frozen + MLP                  & 1.8M & \pmstd{57.4}{13.3} & \pmstd{24.5}{2.1} & \pmstd{33.8}{1.3} & \pmstd{37.7}{0.9} & \pmstd{16.7}{1.4} & \pmstd{73.5}{1.9} & \pmstd{58.9}{0.7} \\
- & \quam{}                              & 10M  & \pmstd{39.5}{2.1} & \pmstd{42.4}{1.1} & \textbf{\pmstd{40.9}{1.0}} & \pmstd{46.7}{0.5} & \pmstd{28.4}{1.2} & \pmstd{85.6}{0.7} & \pmstd{61.3}{0.6} \\
- & \quam{}, ensemble                    & 30M  & 38.1 & 44.0 & 40.8 & 46.7 & 29.5 & 86.5 & 61.2 \\
+ & QuAM-xLSTM-frozen                    & 10M  & \pmstd{39.5}{2.1} & \pmstd{42.4}{1.1} & \pmstd{40.9}{1.0} & \pmstd{46.7}{0.5} & \pmstd{28.4}{1.2} & \pmstd{85.6}{0.7} & \pmstd{61.3}{0.6} \\
+ & \textbf{\quam{} (ours)}              & 96M  & \pmstd{52.8}{6.1} & \textbf{\pmstd{63.3}{3.8}} & \textbf{\pmstd{57.3}{1.9}} & \textbf{\pmstd{64.3}{2.1}} & \textbf{\pmstd{56.8}{1.2}} & \textbf{\pmstd{87.7}{0.3}} & \textbf{\pmstd{64.0}{1.1}} \\
 \bottomrule
 \end{tabular}
 \caption{EComReviews-BD test results. All rows except $^\dagger$ are trained and evaluated by us on
 identical splits with the same metric code and validation-chosen threshold; mean$\pm$std over three
 seeds, $^1$one seed. $^\dagger$Reported by \citet{haque2026ecomreviews} on their split (which may
-differ, Section~\ref{sec:data}) without stated averaging. \emph{trainable}: trained parameters,
-frozen encoders not counted; \emph{det.\ mF1}: detection macro-F1 over aspect names; \emph{pol.\ acc}:
+differ, Section~\ref{sec:data}) without stated averaging. \emph{trainable}: trained parameters, frozen
+encoders not counted; \emph{det.\ mF1}: detection macro-F1 over aspect names; \emph{pol.\ acc}:
 polarity accuracy on gold-mentioned aspects.}
 \label{tab:main}
 \end{table}
@@ -527,58 +531,52 @@ polarity accuracy on gold-mentioned aspects.}
 \toprule
 split & \quam{} vs. & $\Delta$ pair F1 & 95\% CI & $p$ \\
 \midrule
-official & BanglaBERT, fine-tuned & $+0.2$ & $[-1.0,\ 1.4]$ & 0.39 \\
-official & XLM-R, frozen + MLP & $-0.5$ & $[-1.3,\ 0.3]$ & 0.90 \\
-grouped & BanglaBERT, fine-tuned & $-2.3$ & $[-3.5,\ -1.2]$ & 1.00 \\
-grouped & XLM-R, frozen + MLP & $-1.5$ & $[-2.2,\ -0.7]$ & 1.00 \\
-zero-shot & BanglaBERT, fine-tuned & $+1.9$ & $[0.2,\ 3.6]$ & 0.012 \\
-zero-shot & XLM-R, fine-tuned$^1$ & $+13.4$ & $[12.0,\ 14.9]$ & $<$0.001 \\
-zero-shot & XLM-R, frozen + MLP & $+7.0$ & $[5.6,\ 8.4]$ & $<$0.001 \\
+official  & BanglaBERT, fine-tuned & $+14.8$ & $[13.7,\ 16.0]$ & $<$0.001 \\
+official  & XLM-R, fine-tuned$^1$  & $+10.7$ & $[9.5,\ 11.8]$  & $<$0.001 \\
+grouped   & BanglaBERT, fine-tuned & $+13.2$ & $[12.2,\ 14.4]$ & $<$0.001 \\
+grouped   & XLM-R, fine-tuned$^1$  & $+9.3$  & $[8.2,\ 10.4]$  & $<$0.001 \\
+zero-shot & BanglaBERT, fine-tuned & $+18.4$ & $[16.6,\ 20.1]$ & $<$0.001 \\
+zero-shot & XLM-R, fine-tuned$^1$  & $+29.9$ & $[28.5,\ 31.2]$ & $<$0.001 \\
+\midrule
+split & \quam{} vs. & $\Delta$ macro-F1 & 95\% CI & $p$ \\
+\midrule
+BABSA & BanglaBERT, fine-tuned (\quam{} with BanglaBERT) & $+0.4$ & $[-0.7,\ 1.4]$ & 0.25 \\
+BABSA & XLM-R, fine-tuned$^1$ (\quam{} with XLM-R$^1$)  & $+0.7$ & $[-0.9,\ 2.3]$ & 0.19 \\
+BABSA & BanglaBERT, fine-tuned (xLSTM-memory variant) & $+0.9$ & $[-0.1,\ 1.9]$ & 0.040 \\
 \bottomrule
 \end{tabular}
 \caption{Paired bootstrap tests over test reviews (10,000 samples; three seeds per system unless
-marked, $^1$one seed; pair F1 averaged over seeds). $p$ is the fraction of samples in which \quam{} is not better than the
-baseline.}
+marked, $^1$one seed; statistics averaged over seeds). $p$ is the fraction of samples in which \quam{}
+is not better. On BABSA the statistic is aspect-sentiment macro-F1 over gold aspect terms.}
 \label{tab:sig}
 \end{table}
 
-\subsection{RQ1: Baselines are much stronger than reported}
+\subsection{RQ1: Comparison with fine-tuned encoders}
 Table~\ref{tab:main} shows that, trained on the same split and with a validation-chosen threshold,
 fine-tuned BanglaBERT reaches \pmstd{57.9}{0.3} pair F1 instead of the reported 45.0, and fine-tuned
-XLM-R reaches 62.1. Even a frozen XLM-R with a one-layer MLP head reaches \pmstd{58.6}{0.4}. The
-reported baselines have very high recall at low precision (77.1 / 31.8). The same profile appears
-when the presence threshold of our own models is set too low: at a threshold of 0.1, our fine-tuned
-BanglaBERT (seed 42) obtains P 29.6 / R 76.9 / F1 42.8 on our test set, and at 0.05 \quam{} obtains
-P 29.5 / R 79.1 / F1 43.0 (Figure~\ref{fig:sweep}). At the default threshold of 0.5 BanglaBERT already
-reaches 55.1, and at its validation-chosen threshold (0.35) 58.2. Since 91\% of the aspect cells are
-absent, the presence threshold has a large effect on strict pair F1. We cannot verify how the
-original baselines were thresholded, but these numbers show that the reported scores understate what
-the same encoders achieve, and we compare only against our own runs.
+XLM-R 62.1. The reported baselines have very high recall at low precision (77.1 / 31.8); the same
+profile appears when a presence threshold is set too low: at a threshold of 0.1, our fine-tuned
+BanglaBERT (seed 42) obtains P 29.6 / R 76.9 / F1 42.8, and \quam{} P 54.3 / R 83.1 / F1 65.7
+(Figure~\ref{fig:sweep}). Since 91\% of the aspect cells are absent, the threshold matters greatly for
+strict pair F1, and we compare only against our own runs.
+
+\quam{} reaches \pmstd{72.7}{0.3} pair F1 on the official split, 10.7 points above fine-tuned XLM-R and
+14.8 above fine-tuned BanglaBERT (Table~\ref{tab:sig}, $p<0.001$). Without train--test overlap (grouped
+split) the margins are 9.3 and 13.2 points, so the gain does not come from memorised duplicates. The
+gain is balanced between precision and recall, and is largest on rare aspects: detection macro-F1 over
+aspect names rises from 15.4--21.3 for the fine-tuned classifiers to 60.7--61.1. \quam{} also has the
+highest polarity accuracy on the official split and the highest overall-sentiment macro-F1 on all
+splits; on the grouped split its polarity accuracy (89.9) is 0.2 points below fine-tuned BanglaBERT.
+The improvement over QuAM-xLSTM-frozen, our earlier model, is 14.7 points (official), showing that
+prompting the names into a fine-tuned encoder changes the picture fundamentally.
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.48\textwidth]{figures/threshold_sweep.pdf}\hfill
-\includegraphics[width=0.48\textwidth]{figures/pr_eco_detection.pdf}
-\caption{Left: pair and detection P/R/F1 of \quam{} as a function of the presence threshold (official
-split, test, seed 42); a low threshold gives the high-recall, low-precision profile of the reported
-baselines. Right: precision--recall curve of aspect detection.}
+\includegraphics[width=0.55\textwidth]{figures/final_threshold_sweep.pdf}
+\caption{Pair P/R/F1 and detection F1 of \quam{} as a function of the presence threshold (official
+split, test, seed 42); the dotted line is the threshold chosen on validation (0.40).}
 \label{fig:sweep}
 \end{figure}
-
-\subsection{RQ2: Known product categories}
-On the official split, \quam{} (\pmstd{58.0}{0.9}; 59.2 as an ensemble) is on par with fine-tuned
-BanglaBERT and with the frozen-encoder classifier (Table~\ref{tab:sig}; neither difference is
-significant), while training 10M instead of 110M parameters. Without the train--test overlap (grouped
-split) it trails both, by 2.3 and 1.5 points, and both differences are significant. Fine-tuned XLM-R is
-the best system on seen categories (62.1 and 61.9, single runs): when the aspect inventory is known,
-updating the encoder still pays off.
-
-The systems differ beyond pair F1. The fine-tuned encoders are much better at overall-review sentiment
-(78.4 vs.\ 70.6 macro-F1 for \quam{}) and slightly better at aspect polarity (89.4 vs.\ 87.1). The
-frozen-encoder models, on the other hand, detect rare aspects far better: detection macro-F1 over
-aspect names is 28.6--35.4 for \quam{} and the frozen classifier, but only 15.4--21.3 for the
-fine-tuned encoders. Fine-tuning thus appears to fit the frequent aspects at the expense of rare ones
-(Section~\ref{sec:analysis}).
 
 \begin{table}[t]
 \centering\small
@@ -590,10 +588,13 @@ fine-tuned encoders. Fine-tuning thus appears to fit the frequent aspects at the
 model & det.\ F1 & pair F1 & det.\ F1 & pair F1 \\
 \midrule
 BanglaBERT, fine-tuned & \pmstd{57.5}{1.8} & \pmstd{53.8}{1.6} & \pmstd{1.5}{1.1} & \pmstd{0.6}{0.5} \\
-XLM-R, fine-tuned$^1$ & \textbf{68.9} & \textbf{64.1} & 7.1 & 3.1 \\
+XLM-R, fine-tuned$^1$ & 68.9 & 64.1 & 7.1 & 3.1 \\
 XLM-R, frozen + MLP & \pmstd{52.9}{2.6} & \pmstd{47.7}{2.0} & \pmstd{1.5}{2.6} & \pmstd{1.0}{1.7} \\
-\quam{} & \pmstd{62.2}{0.1} & \pmstd{55.2}{0.9} & \pmstd{20.1}{2.0} & \pmstd{16.3}{1.5} \\
-\quam{} without memory & \pmstd{62.2}{1.1} & \pmstd{54.6}{0.3} & \textbf{\pmstd{21.1}{1.1}} & \textbf{\pmstd{17.0}{0.9}} \\
+QuAM-xLSTM-frozen & \pmstd{62.2}{0.1} & \pmstd{55.2}{0.9} & \pmstd{20.1}{2.0} & \pmstd{16.3}{1.5} \\
+\midrule
+\quam{}, no memory & \textbf{\pmstd{77.8}{2.2}} & \textbf{\pmstd{70.1}{2.2}} & \pmstd{41.1}{2.5} & \pmstd{34.7}{2.3} \\
+\quam{}, xLSTM memory & \pmstd{76.8}{0.5} & \pmstd{69.5}{0.8} & \pmstd{41.1}{3.0} & \pmstd{35.0}{2.5} \\
+\textbf{\quam{} (Gated DeltaNet memory)} & \pmstd{76.2}{0.3} & \pmstd{68.5}{0.2} & \textbf{\pmstd{42.6}{2.1}} & \textbf{\pmstd{36.7}{2.1}} \\
 \bottomrule
 \end{tabular}
 \caption{Zero-shot split (four unseen product categories): test mentions split by whether the aspect
@@ -601,161 +602,52 @@ name occurs in training. Mean$\pm$std over three seeds, $^1$one seed.}
 \label{tab:unseen}
 \end{table}
 
-\subsection{RQ3: Unseen product categories and aspect names}
-On four product categories never seen in training, \quam{} is the best system with \pmstd{40.9}{1.0}
-pair F1: 1.9 points above fine-tuned BanglaBERT (95\% CI $[0.2,3.6]$, $p=0.012$), 7.0 above the
-frozen-encoder classifier ($[5.6,8.4]$, $p<0.001$) and 13.4 above fine-tuned XLM-R ($p<0.001$). The
-baselines fail in two different ways. Fine-tuned BanglaBERT and the frozen classifier become very
-conservative on new categories (recall 24.5--26.9), whereas fine-tuned XLM-R over-predicts (precision
-21.0). \quam{} keeps a balanced profile (P 39.5, R 42.4) and a much higher polarity accuracy (85.6 vs.\
-72.1--74.4). Fine-tuned BanglaBERT remains best on overall sentiment (63.3).
+\subsection{RQ2: Unseen product categories and aspect names}
+On four product categories never seen in training, \quam{} reaches \pmstd{57.3}{1.9} pair F1, 18.4
+points above fine-tuned BanglaBERT and 29.9 above fine-tuned XLM-R ($p<0.001$). The baselines fail in
+two ways: fine-tuned BanglaBERT becomes very conservative (recall 26.9), whereas fine-tuned XLM-R
+over-predicts (precision 21.0). \quam{} is recall-oriented on new categories (P 52.8, R 63.3; the
+threshold is chosen on validation data from seen categories), and keeps a much higher polarity
+accuracy (87.7 vs.\ 72.1--74.4).
 
 Table~\ref{tab:unseen} separates the test mentions by whether the aspect name occurs in training. The
-classifiers cannot represent the 18 unseen names, since their output rows for these aspects were never
-trained, and detect them with F1 of 1.5--7.1. For fine-tuned XLM-R, these untrained rows fire often: it
-predicts 3,802 mentions of unseen names against 956 gold mentions, which explains its low overall
-precision. \quam{} detects unseen names with F1 \pmstd{20.1}{2.0}. On the seen aspect names of the new
-categories, fine-tuned XLM-R is clearly best (64.1 pair F1), followed by \quam{} (\pmstd{55.2}{0.9}) and
-fine-tuned BanglaBERT (\pmstd{53.8}{1.6}); \quam{}'s overall advantage therefore comes from the unseen
-names and from not misfiring on them. The variant without the memory is about as good, so this
-advantage comes from scoring aspects by their name (Equation~\ref{eq:direct} and the query network),
-not from the memory specifically. Unseen aspect names remain hard for all systems.
+classifiers cannot represent the 18 unseen names, since their output rows for them were never trained,
+and detect them with F1 of 1.5--7.1. \quam{} detects them with \pmstd{42.6}{2.1} F1 and reaches
+\pmstd{36.7}{2.1} pair F1. It is also better on the \emph{seen} names of the new categories (68.5 vs.\
+64.1 for fine-tuned XLM-R), so the aspect prompt helps new categories in both ways.
 
 \begin{table}[t]
 \centering\small
-\begin{tabular}{lrccc}
+\begin{tabular}{lrcccc}
 \toprule
-model & trainable & accuracy & macro-F1 & implicit macro-F1 \\
+model & trainable & accuracy & macro-F1 & verbatim mF1 & implicit mF1 \\
 \midrule
-BanglaBERT, fine-tuned & 110M & \textbf{\pmstd{70.5}{0.3}} & \textbf{\pmstd{70.6}{0.4}} & \textbf{\pmstd{66.2}{0.6}} \\
-XLM-R, fine-tuned$^1$ & 86M & 67.9 & 67.8 & 63.0 \\
-XLM-R, frozen + MLP & 1.8M & \pmstd{62.0}{0.7} & \pmstd{61.9}{0.4} & \pmstd{55.4}{1.4} \\
-\quam{} & 10M & \pmstd{63.2}{0.2} & \pmstd{63.1}{0.3} & \pmstd{57.8}{1.9} \\
-\quam{}, ensemble & 30M & 63.8 & 63.6 & 58.6 \\
+BanglaBERT, fine-tuned & 110M & \pmstd{70.5}{0.3} & \pmstd{70.6}{0.4} & \pmstd{71.4}{0.6} & \pmstd{66.2}{0.6} \\
+XLM-R, fine-tuned$^1$ & 86M & 67.9 & 67.8 & 68.9 & 63.0 \\
+XLM-R, frozen + MLP & 1.8M & \pmstd{62.0}{0.7} & \pmstd{61.9}{0.4} & \pmstd{63.4}{0.4} & \pmstd{55.4}{1.4} \\
+QuAM-xLSTM-frozen & 10M & \pmstd{63.2}{0.2} & \pmstd{63.1}{0.3} & \pmstd{64.0}{0.0} & \pmstd{57.8}{1.9} \\
+\midrule
+\quam{}, XLM-R$^1$ & 96M & 68.2 & 68.5 & 69.0 & 65.7 \\
+\textbf{\quam{}, BanglaBERT} & 95M & \pmstd{71.0}{0.8} & \pmstd{71.0}{0.8} & \pmstd{70.9}{0.6} & \textbf{\pmstd{70.0}{1.6}} \\
+\quam{}, BanglaBERT, xLSTM memory & 95M & \textbf{\pmstd{71.4}{0.2}} & \textbf{\pmstd{71.5}{0.1}} & \textbf{\pmstd{71.7}{0.2}} & \pmstd{69.0}{1.2} \\
 \bottomrule
 \end{tabular}
-\caption{First aspect-sentiment baselines on BABSA (grouped split, test, 2,570 aspect terms, of which
-510 are implicit). Mean$\pm$std over three seeds, $^1$one seed.}
+\caption{Aspect-sentiment results on BABSA (grouped split, test, 2,570 aspect terms, of which 510 are
+implicit). Mean$\pm$std over three seeds, $^1$one seed.}
 \label{tab:babsa}
 \end{table}
 
 \subsection{BABSA}
-Table~\ref{tab:babsa} gives, to our knowledge, the first aspect-level sentiment results on BABSA. Here
-the aspect terms are open-ended, so the per-aspect rows of \quam{} are unused and it scores aspects by
-name only. Fine-tuned BanglaBERT is clearly best (\pmstd{70.6}{0.4} macro-F1), which is expected for an
-almost purely Bangla-script dataset (98.5\%) and a Bangla-specific encoder. Among the frozen-encoder
-models, \quam{} improves over the classifier by 1.2 points. Implicit aspect terms are harder for every
-model (4--7 points), and neutral is the hardest class (Figure~\ref{fig:cm}, right).
-
-% =========================================================================
-\section{Ablations and Negative Results}
-\label{sec:ablation}
-
-\begin{table}[t]
-\centering\small
-\begin{tabular}{lcc}
-\toprule
-model (grouped split) & pair F1 & overall F1 \\
-\midrule
-\multicolumn{3}{l}{\textit{three seeds}} \\
-\quad \quam{}                      & \textbf{\pmstd{55.6}{0.3}} & \textbf{\pmstd{69.2}{1.4}} \\
-\quad direct path only (no memory) & \pmstd{55.3}{0.2} & \pmstd{64.3}{0.3} \\
-\quad v1: memory read only$^\ddagger$  & \pmstd{43.3}{7.3} & \pmstd{69.5}{0.6} \\
-\quad v1: memory + pooled tokens$^\ddagger$ & \pmstd{47.2}{2.3} & \pmstd{68.4}{0.3} \\
-\quad v1: mean pooling only$^\ddagger$ & \pmstd{45.8}{1.4} & \pmstd{66.9}{0.7} \\
-\quad v1: memory, tied query init.$^\ddagger$ & \pmstd{41.4}{4.9} & \pmstd{69.6}{0.6} \\
-\midrule
-\multicolumn{3}{l}{\textit{seed 42: building up \quam{} from v1}} \\
-\quad v1 + direct path (z-scored) & 52.9 & 64.1 \\
-\quad \quad + category-paired encoding & 54.0 & 69.9 \\
-\quad \quad \quad batch 16, weight decay 0.01 & 51.6 & 63.7 \\
-\quad \quad \quad \quad and no aspect-id dropout & 53.4 & 67.1 \\
-\quad \quad + raw direct features (= \quam{}) & 55.2 & 68.3 \\
-\midrule
-\multicolumn{3}{l}{\textit{v1, seed 42, early stopping}} \\
-\quad presence from $\bm{\mu}$ only & 29.2 & 68.6 \\
-\quad no domain/script prefix & 40.8 & 67.3 \\
-\quad 3 mLSTM blocks         & 38.4 & 68.5 \\
-\quad + sLSTM block (m-m-s-m) & 30.0 & 56.0 \\
-\quad + cross-lingual consistency & 39.1 & 68.9 \\
-\bottomrule
-\end{tabular}
-\caption{Ablations (grouped split, test). $^\ddagger$v1: our first model, without the direct path and
-with the review encoded alone. Rows from single runs are indicative only.}
-\label{tab:ablation}
-\end{table}
-
-\subsection{RQ4: What the memory contributes}
-Table~\ref{tab:ablation} separates the two paths of \quam{}. Removing the memory read leaves aspect
-detection essentially unchanged (55.3 vs.\ 55.6 pair F1 on the grouped split; 40.3 vs.\ 40.9 on the
-zero-shot split) but costs 4.9 points of overall-sentiment macro-F1 (3.6 on zero-shot). The memory is
-therefore most useful as a summary of the whole review, while aspect detection is driven by the pooled
-encoder states and the per-aspect scorer.
-
-Querying the memory alone (v1) was a weaker and unstable detector. Across seeds its pair F1 ranged from
-35.1 to 49.3: inspecting the training curves, the weaker seeds spend many epochs with a nearly constant
-presence loss before detection starts to improve, while mean pooling does not show this plateau. This
-is why we train for a fixed number of epochs without early stopping. Averaged over seeds as an ensemble,
-the memory-only v1 model was better than pooling (49.3 vs.\ 47.6), so the memory does carry aspect
-information, but it is harder to optimise.
-
-\subsection{From v1 to \quam{}}
-Our first model (v1) read only the memory and encoded the review alone; on the grouped split it reached
-\pmstd{47.2}{2.3}, almost ten points below the frozen-encoder classifier. Three changes closed most of
-this gap (seed 42): adding the direct path (52.9), encoding the review together with its category
-(54.0; this is also worth 3.1 points for the frozen classifier, 57.2 vs.\ 54.1), and feeding raw
-rather than z-scored encoder states to the direct path (55.2). Matching the baselines' batch size and
-weight decay lowered results (51.6). In that setting, removing aspect-id dropout recovered 1.8 points
-(53.4), so the dropout, which keeps the name-based scorer useful for unseen aspects, may cost some
-accuracy on seen aspects; we keep it because unseen categories are the setting where \quam{} is most
-useful.
-
-\subsection{What did not help}
-\textit{Tied query initialisation}, which starts each aspect query as the key that the memory would
-write for the aspect name, raised the presence signal at initialisation (AUROC of the raw read
-0.44$\rightarrow$0.55) but did not improve final results. \textit{Per-aspect thresholds} tuned on
-validation lowered test pair F1 (45.4$\rightarrow$42.9 for v1), because validation and test differ for
-rare aspects. \textit{Cross-lingual consistency} between a review and its NLLB translation hurt
-(39.1), plausibly because machine translations of Banglish are noisy. Adding an \textit{sLSTM block}
-lowered results (30.0) and made training 4.5$\times$ slower; these runs used early stopping with patience
-4, which interacts with the slow-start behaviour above, so the sLSTM result may be pessimistic. The
-\textit{domain/script prefix} helped by 4.6 points, and a third mLSTM block did not help.
-
-% =========================================================================
-\section{Analysis}
-\label{sec:analysis}
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.46\textwidth]{figures/cm_eco_joint.pdf}\hfill
-\includegraphics[width=0.46\textwidth]{figures/cm_babsa.pdf}
-\caption{Test confusion matrices of \quam{} (rows: gold; percentages are row-normalised). Left:
-EComReviews-BD aspect--sentiment pairs, official split, seed 42. Right: BABSA aspect sentiment, seed
-42.}
-\label{fig:cm}
-\end{figure}
-
-\paragraph{Missed negative aspects.}
-Figure~\ref{fig:cm} (left) shows that 47\% of mentioned negative aspects are predicted as absent,
-against 32\% of positive ones. Negative aspects are less frequent (26\% of mentioned aspects), and we
-hypothesise that complaints are more often expressed without naming the aspect; verifying this
-requires a manual study that we leave to future work. When a negative aspect is detected, its polarity
-is right in 72\% of cases (382 of 532), against 94\% for positive aspects (1,789 of 1,895).
-
-\paragraph{Rare aspects.}
-Detection quality depends strongly on how often an aspect occurs in training (Figure~\ref{fig:freq}):
-on the grouped split, detection F1 is 68.8 for the 10 aspects with ${\geq}500$ training mentions, 45.5
-for the 25 aspects with 50--499 and 23.0 for the 39 aspects with fewer than 50 (seed 42). Because more
-than half of the aspects are rare, macro-F1 over aspect names stays far below micro F1 for every
-system, and the fine-tuned encoders suffer most (Table~\ref{tab:main}).
-
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.6\textwidth]{figures/aspect_f1_vs_freq.pdf}
-\caption{Per-aspect detection F1 of \quam{} against the number of training mentions (grouped split,
-seed 42; marker size = test mentions).}
-\label{fig:freq}
-\end{figure}
+On BABSA (Table~\ref{tab:babsa}), the aspect terms are open-ended, so the per-aspect rows of \quam{}
+are unused and it scores aspects by name only. With the same encoder, \quam{} improves over the
+fine-tuned classifier for both BanglaBERT (71.0 vs.\ 70.6) and XLM-R (68.5 vs.\ 67.8), but the
+differences are not significant (Table~\ref{tab:sig}). The clearest gain is on implicit aspect terms,
+which do not occur in the text: 70.0 vs.\ 66.2 macro-F1 with BanglaBERT. Reading the term together
+with the other candidates and the text in one input appears to help when the term must be inferred.
+On verbatim terms, fine-tuned BanglaBERT is 0.5 points better. The xLSTM-memory variant is the best
+system on BABSA (71.5) and significantly better than fine-tuned BanglaBERT ($+0.9$, $p=0.040$); since
+BABSA texts are short and have one or two aspects, the overwriting property of the delta rule has
+little to act on here.
 
 \begin{table}[t]
 \centering\small
@@ -764,9 +656,9 @@ seed 42; marker size = test mentions).}
 model (official split) & English & Bangla & mixed & Banglish \\
 \midrule
 BanglaBERT, fine-tuned & 60.0 & 56.4 & 56.8 & 55.9 \\
-XLM-R, fine-tuned$^1$ & \textbf{64.5} & \textbf{59.8} & \textbf{63.2} & \textbf{60.2} \\
+XLM-R, fine-tuned$^1$ & 64.5 & 59.8 & 63.2 & 60.2 \\
 XLM-R, frozen + MLP & 61.9 & 56.3 & 57.7 & 54.0 \\
-\quam{} & 61.8 & 55.7 & 56.3 & 53.0 \\
+\textbf{\quam{}} & \textbf{75.8} & \textbf{70.0} & \textbf{73.6} & \textbf{69.8} \\
 \midrule
 test reviews & 1,416 & 1,137 & 189 & 356 \\
 \bottomrule
@@ -775,93 +667,214 @@ test reviews & 1,416 & 1,137 & 189 & 356 \\
 \label{tab:script}
 \end{table}
 
-\paragraph{Scripts.}
-Table~\ref{tab:script} breaks pair F1 down by script. All systems are best on English and worst on
-Banglish, which has no standard spelling and is under-represented in the encoders' pretraining data.
-The frozen-encoder systems lose most on Banglish (53.0--54.0, against 55.9 for fine-tuned BanglaBERT
-and 60.2 for fine-tuned XLM-R), which suggests that adapting the encoder matters most for romanised
-text. Since our model's frozen encoder is the main limitation here, combining name-based querying with
-a fine-tuned encoder is a natural next step.
+\subsection{Scripts}
+Table~\ref{tab:script} breaks pair F1 down by script. \quam{} improves on every script by 9.6--11.3
+points over fine-tuned XLM-R and by 13.6--16.8 over fine-tuned BanglaBERT. English remains the easiest
+script and Banglish, which has no standard spelling, the hardest; the gap between them (6.0 points) is
+similar to the baselines' (4.1--7.9).
+
+% =========================================================================
+\section{Ablations}
+\label{sec:ablation}
+
+\begin{table}[t]
+\centering\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccccccccc}
+\toprule
+ & \multicolumn{4}{c}{official} & \multicolumn{5}{c}{zero-shot} \\
+\cmidrule(lr){2-5}\cmidrule(lr){6-10}
+variant & $n$ & pair & det.\ mF1 & overall & $n$ & pair & det.\ mF1 & unseen pair & overall \\
+\midrule
+\textbf{\quam{}} (prompt + fine-tuned XLM-R + Gated DeltaNet) & 3 & 72.7 & \textbf{61.1} & 78.7 & 3 & 57.3 & \textbf{56.8} & \textbf{36.7} & 64.0 \\
+\midrule
+\multicolumn{10}{l}{\textit{memory}} \\
+\quad xLSTM (mLSTM) instead of Gated DeltaNet & 3 & 72.7 & 60.1 & 78.3 & 3 & 57.8 & 55.3 & 35.0 & 64.3 \\
+\quad no memory (direct scorer only)            & 3 & 73.2 & 59.5 & 79.2 & 3 & 57.7 & 55.6 & 34.7 & 64.1 \\
+\quad memory only (no direct scorer), xLSTM     & -- & -- & -- & -- & 1 & 53.2 & 56.7 & 31.3 & 64.6 \\
+\multicolumn{10}{l}{\textit{aspect read-out (seed 42; full model: 72.5 / 63.4 / 79.0 and 59.4 / 57.8 / 39.1 / 65.3)}} \\
+\quad marker token before the name (TMM-style)   & 1 & 72.0 & 57.7 & 79.1 & 1 & 58.0 & 58.8 & 37.9 & 64.1 \\
+\multicolumn{10}{l}{\textit{aspect prompt}} \\
+\quad no aspect prompt (xLSTM memory)            & 2 & 67.0 & 37.0 & 78.6 & 2 & 48.4 & 39.0 & 22.0 & 63.6 \\
+\quad no aspect prompt, no memory                & 2 & 66.7 & 35.8 & 78.2 & 2 & 49.4 & 35.4 & 19.9 & 63.6 \\
+\multicolumn{10}{l}{\textit{encoder fine-tuning (xLSTM memory vs.\ none)}} \\
+\quad 9 of 12 layers frozen                      & 1 & 68.5 & 44.8 & 76.8 & & & & & \\
+\quad 9 of 12 layers frozen, no memory           & 1 & 68.6 & 47.0 & 77.4 & & & & & \\
+\quad encoder frozen                             & 1 & 53.7 & 35.9 & 73.5 & & & & & \\
+\quad encoder frozen, no memory                  & 1 & 53.2 & 35.4 & 56.9 & & & & & \\
+\quad QuAM-xLSTM-frozen (cached, no prompt)      & 3 & 58.0 & 32.4 & 70.6 & 3 & 40.9 & 28.4 & 16.3 & 61.3 \\
+\bottomrule
+\end{tabular}
+\caption{Ablations (test). $n$: number of seeds; means over seeds. \emph{unseen pair}: pair F1 on the
+956 mentions of aspect names unseen in training.}
+\label{tab:ablation}
+\end{table}
+
+\begin{table}[t]
+\centering\small
+\begin{tabular}{llccccc}
+\toprule
+split & statistic & GDN & none & $\Delta$ (95\% CI), $p$ & xLSTM & $\Delta$ (95\% CI), $p$ \\
+\midrule
+official  & pair F1          & 72.7 & 73.2 & $-0.5$ $[-1.0,\,0.0]$, 0.96 & 72.7 & $0.0$ $[-0.6,\,0.5]$, 0.54 \\
+official  & det.\ macro-F1   & 61.1 & 59.5 & $+1.6$ $[-0.2,\,3.4]$, 0.045 & 60.1 & $+1.0$ $[-0.6,\,3.0]$, 0.086 \\
+zero-shot & pair F1          & 57.3 & 57.7 & $-0.4$ $[-1.0,\,0.2]$, 0.89 & 57.8 & $-0.5$ $[-1.1,\,0.0]$, 0.97 \\
+zero-shot & det.\ macro-F1   & 56.8 & 55.6 & $+1.2$ $[0.1,\,2.4]$, 0.019 & 55.3 & $+1.6$ $[0.5,\,2.8]$, 0.004 \\
+zero-shot & unseen det.\ F1  & 42.6 & 41.1 & $+1.5$ $[0.5,\,2.5]$, 0.003 & 41.1 & $+1.5$ $[0.5,\,2.5]$, 0.002 \\
+zero-shot & unseen pair F1   & 36.7 & 34.7 & $+2.0$ $[0.9,\,3.1]$, 0.001 & 35.0 & $+1.8$ $[0.6,\,2.9]$, 0.001 \\
+\bottomrule
+\end{tabular}
+\caption{What the Gated DeltaNet (GDN) memory contributes: paired bootstrap of \quam{} against the same
+model without memory and with an xLSTM memory (three seeds each, 2,000 samples; $p$ is one-sided, the
+interval two-sided). For comparison, the
+xLSTM memory against no memory: zero-shot unseen pair F1 $+0.2$ ($p=0.35$), det.\ macro-F1 $-0.3$
+($p=0.71$), official det.\ macro-F1 $+0.6$ ($p=0.35$).}
+\label{tab:memsig}
+\end{table}
+
+\subsection{RQ3: The aspect prompt and the read-out}
+Writing the candidate aspect names into the input is the largest single gain (Table~\ref{tab:ablation}):
+without it, the otherwise identical fine-tuned model reaches 67.0 instead of 72.7 pair F1 on the
+official split and 48.4 instead of 57.3 on unseen categories, and detection macro-F1 drops from 61.1 to
+37.0. In the prompted model every name is read in the context of the review and of the other candidate
+names, which lets the encoder decide which of them the review refers to; rare aspects benefit most. For
+unseen names the prompt nearly doubles pair F1 (19.9--22.0 $\rightarrow$ 34.7--36.7).
+
+Reading each aspect from the separator token before its name (TMM-style) instead of the mean over its
+span is slightly worse on the official split (72.0 vs.\ 72.5 pair F1, 57.7 vs.\ 63.4 detection
+macro-F1; seed 42) and on unseen categories (58.0 vs.\ 59.4 pair F1, 37.9 vs.\ 39.1 on unseen names),
+although its zero-shot macro-F1 is higher (58.8 vs.\ 57.8). We keep the span mean, which also does not
+depend on a particular separator.
+
+\subsection{RQ4: The contribution of the delta-rule memory}
+Table~\ref{tab:memsig} isolates the memory. With a fine-tuned, aspect-prompted encoder, no memory
+changes overall pair F1 significantly: the direct scorer already sees contextual aspect queries, and
+the differences ($-0.5$ to $0.0$) are within the noise. The Gated DeltaNet memory, however, adds
+consistent and significant gains where the direct scorer is weakest: on aspect names unseen in
+training ($+2.0$ pair F1, $p=0.001$; $+1.5$ detection F1, $p=0.003$) and on rare aspects (detection
+macro-F1 $+1.2$ on unseen categories, $p=0.019$, and $+1.6$ on the official split, $p=0.045$). An xLSTM
+memory in the same position gives none of these gains (all $p\geq0.35$ against no memory), and the
+Gated DeltaNet memory is significantly better than it on unseen names ($+1.8$, $p=0.001$) and on
+zero-shot macro-F1 ($+1.6$, $p=0.004$).
+
+We attribute the difference to the update rule. The mLSTM sums all key--value outer products, so the
+read-out for an aspect query mixes every association whose key is similar, and for a frequent query
+direction it is dominated by frequent content. The delta rule stores one corrected value per key
+direction, so the read under an unfamiliar aspect query returns a cleaner, more specific association,
+which matters exactly for unseen and rare names. On seen, frequent aspects the direct scorer with its
+learned per-aspect rows (Equation~\ref{eq:direct}) is already strong, and the memory adds little.
+
+\subsection{When the encoder is not fine-tuned}
+The value of a memory depends on how much the encoder adapts. With 9 of 12 encoder layers frozen,
+memory and no memory perform the same (68.5 vs.\ 68.6). With the encoder fully frozen but still
+prompted, the memory is essential for review-level sentiment (overall macro-F1 73.5 vs.\ 56.9), and
+a memory read alone, without the direct scorer, still reaches 53.2 pair F1 on unseen categories. A
+fully fine-tuned encoder thus absorbs most of what a memory can add on known aspects, and the memory
+remains useful for unseen and rare aspect names.
+
+% =========================================================================
+\section{Analysis}
+\label{sec:analysis}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.46\textwidth]{figures/final_cm_eco.pdf}\hfill
+\includegraphics[width=0.46\textwidth]{figures/final_cm_babsa.pdf}
+\caption{Test confusion matrices of \quam{} (rows: gold; percentages are row-normalised). Left:
+EComReviews-BD aspect--sentiment pairs, official split, seed 42. Right: BABSA aspect sentiment
+(BanglaBERT encoder), seed 42.}
+\label{fig:cm}
+\end{figure}
+
+\paragraph{Missed negative aspects.}
+Figure~\ref{fig:cm} (left) shows that 30\% of mentioned negative aspects are predicted as absent,
+against 16\% of positive ones, and that a detected negative aspect has the right polarity in 81\% of
+cases (563 of 699), against 96\% for positive aspects (2,233 of 2,336). Negative aspects are less
+frequent (26\% of mentions), and we hypothesise that complaints are more often expressed without naming
+the aspect; verifying this needs a manual study. On BABSA, neutral is the hardest class
+(Figure~\ref{fig:cm}, right).
+
+\paragraph{Rare aspects.}
+Detection still depends on how often an aspect occurs in training (Figure~\ref{fig:freq}): on the
+grouped split, mean per-aspect detection F1 is 79.9 for the 10 aspects with ${\geq}500$ training
+mentions, 63.5 for the 25 with 50--499 and 53.5 for the 36 with fewer than 50 (three seeds). For the
+frozen QuAM-xLSTM, aspects with fewer than 50 training mentions reached only 23.0 (seed 42), and the fine-tuned classifiers have a
+detection macro-F1 of 15.4--21.3, so rare aspects are where \quam{} gains most.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.6\textwidth]{figures/final_aspect_f1_vs_freq.pdf}
+\caption{Per-aspect detection F1 of \quam{} against the number of training mentions (grouped split,
+mean of three seeds; marker size = test mentions).}
+\label{fig:freq}
+\end{figure}
 
 \paragraph{Efficiency.}
-With pre-computed encoder states, the \quam{} head processes about 1,500 test reviews per second
-(0.7\,ms per review including all aspect reads, 0.5\,GB peak GPU memory) on the RTX 2050. These numbers
-exclude the frozen encoder, which runs once per review and is shared by all aspects and all training
-epochs. A \quam{} training run takes about 12 minutes, against about 30 (BanglaBERT) and 40 minutes
-(XLM-R) for fine-tuning on the same GPU, and its peak training memory (1.9\,GB) leaves room on a 4\,GB
-card where fine-tuning XLM-R required freezing the embeddings.
+A \quam{} training run takes 35--60 minutes on an RTX 2050 laptop GPU (BABSA: about 26 minutes) with a
+peak of 2.9\,GB, comparable to fine-tuning the baselines (30--40 minutes). At inference it needs one
+encoder pass per review, like the baselines; the aspect names lengthen the input by about 40 tokens,
+and each aspect costs one $O(d^2)$ memory read and one small scorer.
 
 % =========================================================================
 \section{Discussion}
 \label{sec:discussion}
 
-\paragraph{When to use which model.}
-Our results suggest a simple rule. When the product categories and their aspect inventories are known
-and enough labelled data exist, a fine-tuned encoder with one output per aspect is the most accurate
-choice; fine-tuned XLM-R was best on all seen-category splits, and fine-tuned BanglaBERT on the
-Bangla-only BABSA. When new categories appear, or many aspects are rare, a model that scores aspects by
-their name is preferable: \quam{} was the best system on unseen categories, detected unseen aspect
-names that the classifiers could not represent, and detected rare aspects better than the fine-tuned
-encoders. A fine-tuned encoder still handles the known aspects of a new category best, which suggests
-combining the two: a fine-tuned encoder for the known inventory and name-based scoring for new names. \quam{} also needs far less compute, because the encoder runs once per review and is not
-trained.
+\paragraph{Why the aspect prompt works.} The fine-tuned classifiers have to learn each aspect as an
+output row from its training mentions, which fails for rare aspects and cannot work for unseen ones.
+Writing the names into the input turns aspect detection into reading comprehension: the encoder sees
+``battery'' next to a review that mentions the battery and can align the two, whatever the language of
+the review. This is why the gain is largest on rare aspects, unseen names and new categories, and why
+it holds across all four scripts.
 
-\paragraph{Role of the matrix memory.}
-The initial hypothesis of this work was that querying the final xLSTM memory with the aspect name would
-be a strong aspect detector by itself. This was only partly confirmed. The memory does carry aspect
-information (as an ensemble the memory-only model outperformed mean pooling), but it is harder to
-optimise and is outperformed by a pooled per-aspect scorer. In the final model, the memory mainly
-improves overall-review sentiment (+4.9 macro-F1), where summarising the whole review matters. We
-report this negative result because it constrains how matrix memories should be read: as a summary
-that complements pooled features rather than as a replacement for them.
+\paragraph{Role of the memory.} Our first hypothesis was that querying a recurrent matrix memory with
+aspect names would be a strong detector by itself. With a frozen encoder this was partly true: the
+memory was essential for review-level sentiment. With a fine-tuned, prompted encoder, no memory raises
+overall pair F1. The delta-rule memory nevertheless adds a consistent and significant improvement on
+the hardest part of the task, unseen and rare aspect names, which an additive xLSTM memory does not.
+We therefore see the memory as a targeted component for open aspect inventories, not as the source of
+the main gain.
 
-\paragraph{Evaluation practice.}
-Two findings concern evaluation more than modelling. First, a substantial part of the gap between a
-new model and published baselines can come from the baselines' training and thresholding rather than
-from the model, so baselines should be re-run under identical conditions and with a tuned decision
-threshold. Second, 11.5\% of the standard test reviews also occur in training. \quam{} scores 2.4
-points higher on the official than on the grouped split (58.0 vs.\ 55.6), while fine-tuned BanglaBERT
-scores the same on both (57.9 vs.\ 58.0). The two test sets differ in more than the overlap, but the
-comparison between the systems changes from a tie to a significant difference, so we recommend
-reporting the grouped split alongside the official one.
+\paragraph{Evaluation practice.} A substantial part of the gap between a new model and published
+baselines can come from the baselines' thresholding: re-tuned on validation, fine-tuned BanglaBERT
+gains 12.9 points over its reported score. In addition, 11.5\% of the standard test reviews also occur
+in training. We recommend reporting the grouped split alongside the official one and tuning the
+threshold of every system on validation.
 
 \paragraph{Threats to validity.}
 Our reproduction of the official split may not select exactly the same rows as the original paper.
-Some baselines were run with a single seed, and XLM-R was fine-tuned with frozen word embeddings to fit
-into 4\,GB, which may slightly underestimate it. BanglaBERT was used without its own normaliser. The
-significance tests account for test-set sampling and average over three seeds, but do not fully capture
-training variance. The zero-shot split contains only four categories and 18 unseen aspect names. The
-v1 ablations at the bottom of Table~\ref{tab:ablation} are single runs with early stopping. Both
-datasets come from Bangladesh, and we did not test other languages or domains.
+Fine-tuned XLM-R was run with one seed and with frozen word embeddings to fit into 4\,GB, which may
+slightly underestimate it; \quam{} uses the same constraint. Several ablation rows have one or two seeds.
+The bootstrap tests capture test-set sampling, but not training variance across seeds; the memory
+effects of 1.2--2.0 points should be read with this in mind. The zero-shot split has four categories and
+18 unseen aspect names. On BABSA, \quam{}'s improvement over fine-tuned BanglaBERT is not significant.
+Both datasets come from Bangladesh.
 
 % =========================================================================
 \section{Conclusion}
 \label{sec:conclusion}
 
-We studied aspect-based sentiment analysis of Bangla, Banglish and English e-commerce reviews with
-\quam{}, a model that reads a review once and answers aspects by querying an xLSTM matrix memory with
-the aspect name, combined with a per-aspect scorer on pooled encoder states. Trained and evaluated
-under identical conditions, standard encoders are far stronger on EComReviews-BD than previously
-reported, and fine-tuned XLM-R is the best system when the aspect inventory is known (RQ1). With a
-frozen encoder and 10M trained parameters, \quam{} matches fine-tuned BanglaBERT on the standard split
-but trails it without train--test overlap (RQ2). It is the best system on unseen product categories
-and the only one that detects unseen aspect names to a useful degree, an advantage that comes from
-scoring aspects by name (RQ3). The memory read mainly improves overall-review sentiment, not
-detection (RQ4). We also release a leakage-free and a zero-shot split and the first aspect-sentiment
-baselines on BABSA. Future work should combine name-based querying with a fine-tuned encoder, improve
-the detection of unseen aspect names and of implicitly expressed negative aspects, and extend the
-evaluation to further low-resource and code-mixed settings.
+We presented \quam{}, an aspect-based sentiment model for Bangla, Banglish and English e-commerce
+reviews that writes all candidate aspect names into the input of a fine-tuned encoder, represents each
+aspect by its contextual name span, and reads a bidirectional Gated DeltaNet memory with it. Trained and
+evaluated under identical conditions with fine-tuned BanglaBERT and XLM-R, it improves strict pair F1 by
+10.7 points on the standard split, 9.3 on a leakage-free split and 18.4 on unseen product categories
+($p<0.001$), and is the first model on these data to detect unseen aspect names to a useful degree
+(RQ1, RQ2). The aspect prompt is the largest gain, and the delta-rule memory, unlike an xLSTM memory,
+significantly improves unseen and rare aspect names (RQ3, RQ4). We also release a leakage-free and a
+zero-shot split and report aspect-sentiment results on BABSA. Future work should improve the detection
+of implicitly expressed negative aspects, calibrate the presence threshold for new categories, and
+extend the evaluation to further low-resource and code-mixed languages.
 
 % =========================================================================
 \section*{Data and Code Availability}
 EComReviews-BD is available under CC BY 4.0 and BABSA under CC BY-NC-SA 4.0 from their original
 publications. Our code, the split definitions (as lists of review identifiers) and the configurations
-of all runs reported here will be released upon publication.
+of all runs will be released upon publication.
 
 \section*{Ethics Statement}
-Both datasets are public; the BABSA licence restricts our use of it to non-commercial research. The
-reviews may contain names of sellers or products, but no personal data were collected by us. ABSA
-systems can be used to filter or rank reviews; errors that systematically miss negative aspects
+Both datasets are public; the BABSA licence restricts our use to non-commercial research. The reviews
+may contain names of sellers or products, but no personal data were collected by us. ABSA systems can
+be used to filter or rank reviews; errors that systematically miss negative aspects
 (Section~\ref{sec:analysis}) could favour sellers, so deployments should be audited for this.
 
 \section*{Use of AI Assistants}

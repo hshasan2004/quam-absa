@@ -21,7 +21,8 @@ from quam.data import load_records  # noqa: E402
 from train import make_loader  # noqa: E402
 
 OURS = ["q2_zeroshot", "q2only_zeroshot"]
-BASE = ["bl_xlmr_frozen_zeroshot", "bl_banglabert_zeroshot", "bl_xlmr_zeroshot"]
+BASE = ["bl_xlmr_frozen_zeroshot", "bl_banglabert_zeroshot", "bl_xlmr_zeroshot",
+        "ftp_zeroshot", "ft_zeroshot"]          # last two: QuAM-FT (from test_preds.npz)
 
 
 def f1s(A, t, mask):

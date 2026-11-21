@@ -49,6 +49,9 @@ def f1(c):
 def ours_preds(names, dev="cuda"):
     out = []
     for n in names:
+        if not (ROOT / "runs" / n / "best.pt").exists():     # QuAM-FT runs keep test predictions only
+            out += base_preds([n])
+            continue
         run, cfg, met = load_run(n)
         recs = load_records(("eco",))
         test_ds, _, model = build(cfg, cache_for(cfg), recs)

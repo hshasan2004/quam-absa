@@ -1,0 +1,360 @@
+[
+ {
+  "variant": "Full model (prompt + fine-tuned XLM-R + Gated DeltaNet)",
+  "official": {
+   "n": 3,
+   "pair_F1": [
+    72.70633767603978,
+    0.3307430343791492
+   ],
+   "det_macroF1": [
+    61.143922063241355,
+    1.975662592903281
+   ],
+   "overall_macroF1": [
+    78.71127461495843,
+    0.4022351201362752
+   ]
+  },
+  "zeroshot": {
+   "n": 3,
+   "pair_F1": [
+    57.263674137244706,
+    1.897091340106829
+   ],
+   "det_macroF1": [
+    56.842038081347184,
+    1.2015273332291783
+   ],
+   "overall_macroF1": [
+    64.01790426659899,
+    1.1409195203308107
+   ],
+   "unseen": [
+    36.71804852491351,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "aspect read: marker token (TMM-style) instead of span mean",
+  "official": {
+   "n": 1,
+   "pair_F1": [
+    71.9672131147541,
+    null
+   ],
+   "det_macroF1": [
+    57.6635562887837,
+    null
+   ],
+   "overall_macroF1": [
+    79.09197803588106,
+    null
+   ]
+  },
+  "zeroshot": {
+   "n": 1,
+   "pair_F1": [
+    57.96816018381749,
+    null
+   ],
+   "det_macroF1": [
+    58.83197590940055,
+    null
+   ],
+   "overall_macroF1": [
+    64.05371281061889,
+    null
+   ],
+   "unseen": [
+    37.869249394673126,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "memory: xLSTM (mLSTM) instead of Gated DeltaNet",
+  "official": {
+   "n": 3,
+   "pair_F1": [
+    72.74175101118304,
+    0.41635366524353784
+   ],
+   "det_macroF1": [
+    60.14668058399434,
+    1.2095997096637234
+   ],
+   "overall_macroF1": [
+    78.29078400356497,
+    0.7352517372432992
+   ]
+  },
+  "zeroshot": {
+   "n": 3,
+   "pair_F1": [
+    57.77298663502039,
+    1.4338568608395572
+   ],
+   "det_macroF1": [
+    55.26353609023531,
+    1.2155323643181795
+   ],
+   "overall_macroF1": [
+    64.32108387490025,
+    2.7988249335288113
+   ],
+   "unseen": [
+    34.96512847556023,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "memory: none (direct scorer only)",
+  "official": {
+   "n": 3,
+   "pair_F1": [
+    73.16039117209577,
+    0.32390646184985195
+   ],
+   "det_macroF1": [
+    59.50544008599962,
+    0.5988011466633056
+   ],
+   "overall_macroF1": [
+    79.19105999840158,
+    1.0158415428527645
+   ]
+  },
+  "zeroshot": {
+   "n": 3,
+   "pair_F1": [
+    57.65206331793641,
+    1.167642279827097
+   ],
+   "det_macroF1": [
+    55.59902442257657,
+    0.5420512587917339
+   ],
+   "overall_macroF1": [
+    64.13692986424485,
+    1.551483496393651
+   ],
+   "unseen": [
+    34.72793010911987,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "memory only (no direct scorer), xLSTM",
+  "official": null,
+  "zeroshot": {
+   "n": 1,
+   "pair_F1": [
+    53.230814727192076,
+    null
+   ],
+   "det_macroF1": [
+    56.72827206035564,
+    null
+   ],
+   "overall_macroF1": [
+    64.59020452373116,
+    null
+   ],
+   "unseen": [
+    31.278195488721803,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "no aspect prompt (xLSTM)",
+  "official": {
+   "n": 2,
+   "pair_F1": [
+    66.96694474509603,
+    0.46306095794648267
+   ],
+   "det_macroF1": [
+    36.97168359204413,
+    0.017891770088000157
+   ],
+   "overall_macroF1": [
+    78.61315662797631,
+    0.225318213660671
+   ]
+  },
+  "zeroshot": {
+   "n": 2,
+   "pair_F1": [
+    48.38450160748647,
+    0.2629627735952307
+   ],
+   "det_macroF1": [
+    39.046407238893465,
+    2.2698719051695613
+   ],
+   "overall_macroF1": [
+    63.56538714141904,
+    1.1762723523957788
+   ],
+   "unseen": [
+    22.04218021180192,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "no aspect prompt, no memory",
+  "official": {
+   "n": 2,
+   "pair_F1": [
+    66.6738318070216,
+    0.14373216599828106
+   ],
+   "det_macroF1": [
+    35.776088030332,
+    2.497761156002106
+   ],
+   "overall_macroF1": [
+    78.23596351940753,
+    0.17339265521848995
+   ]
+  },
+  "zeroshot": {
+   "n": 2,
+   "pair_F1": [
+    49.38401535379199,
+    2.779940388775058
+   ],
+   "det_macroF1": [
+    35.44408138108241,
+    3.029181351779178
+   ],
+   "overall_macroF1": [
+    63.6385751649278,
+    1.0059955425166642
+   ],
+   "unseen": [
+    19.891826641168734,
+    null
+   ]
+  }
+ },
+ {
+  "variant": "encoder 9/12 layers frozen (xLSTM)",
+  "official": {
+   "n": 1,
+   "pair_F1": [
+    68.54838709677419,
+    null
+   ],
+   "det_macroF1": [
+    44.841219943439306,
+    null
+   ],
+   "overall_macroF1": [
+    76.78154059636269,
+    null
+   ]
+  },
+  "zeroshot": null
+ },
+ {
+  "variant": "encoder 9/12 layers frozen, no memory",
+  "official": {
+   "n": 1,
+   "pair_F1": [
+    68.59706362153344,
+    null
+   ],
+   "det_macroF1": [
+    47.031042506479956,
+    null
+   ],
+   "overall_macroF1": [
+    77.36394760738172,
+    null
+   ]
+  },
+  "zeroshot": null
+ },
+ {
+  "variant": "encoder fully frozen (xLSTM)",
+  "official": {
+   "n": 1,
+   "pair_F1": [
+    53.68802902055623,
+    null
+   ],
+   "det_macroF1": [
+    35.92418856637119,
+    null
+   ],
+   "overall_macroF1": [
+    73.52957783367641,
+    null
+   ]
+  },
+  "zeroshot": null
+ },
+ {
+  "variant": "encoder fully frozen, no memory",
+  "official": {
+   "n": 1,
+   "pair_F1": [
+    53.191489361702125,
+    null
+   ],
+   "det_macroF1": [
+    35.414089713901916,
+    null
+   ],
+   "overall_macroF1": [
+    56.86009544821435,
+    null
+   ]
+  },
+  "zeroshot": null
+ },
+ {
+  "variant": "old QuAM: frozen cached XLM-R, no prompt (xLSTM)",
+  "official": {
+   "n": 3,
+   "pair_F1": [
+    58.03839131972493,
+    0.9440481954736583
+   ],
+   "det_macroF1": [
+    32.412698621417206,
+    2.4226270410863484
+   ],
+   "overall_macroF1": [
+    70.63487833358319,
+    0.6933739576534661
+   ]
+  },
+  "zeroshot": {
+   "n": 3,
+   "pair_F1": [
+    40.85750300504191,
+    0.9886718585160097
+   ],
+   "det_macroF1": [
+    28.418204766107266,
+    1.2221697692674311
+   ],
+   "overall_macroF1": [
+    61.33719597252687,
+    0.5885315036726524
+   ],
+   "unseen": [
+    16.324016904718025,
+    null
+   ]
+  }
+ }
+]

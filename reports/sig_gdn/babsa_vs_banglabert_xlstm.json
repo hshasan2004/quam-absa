@@ -1,0 +1,32 @@
+{
+ "ours": [
+  "ftp_babsa_banglabert",
+  "ftp_babsa_banglabert_s1",
+  "ftp_babsa_banglabert_s2"
+ ],
+ "baseline": [
+  "bl_babsa_banglabert",
+  "bl_babsa_banglabert_s1",
+  "bl_babsa_banglabert_s2"
+ ],
+ "n_reviews": 2114,
+ "n_aspects": 2570,
+ "ours_macroF1": 71.4883328883646,
+ "baseline_macroF1": 70.59535461466271,
+ "diff": 0.8929782737018832,
+ "diff_95CI": [
+  -0.10939555904474457,
+  1.8951493309624596
+ ],
+ "p_value": 0.0395,
+ "per_seed_ours": [
+  71.40483520483527,
+  71.6131059904531,
+  71.44705746980539
+ ],
+ "per_seed_base": [
+  70.20249984430151,
+  70.99083500759988,
+  70.59272899208673
+ ]
+}

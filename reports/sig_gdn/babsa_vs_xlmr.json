@@ -1,0 +1,24 @@
+{
+ "ours": [
+  "ftp_gdn_babsa_xlmr"
+ ],
+ "baseline": [
+  "bl_babsa_xlmr"
+ ],
+ "n_reviews": 2114,
+ "n_aspects": 2570,
+ "ours_macroF1": 68.52642108052285,
+ "baseline_macroF1": 67.83895833735257,
+ "diff": 0.6874627431702862,
+ "diff_95CI": [
+  -0.8481975752884652,
+  2.2453540171591566
+ ],
+ "p_value": 0.1869,
+ "per_seed_ours": [
+  68.52642108052285
+ ],
+ "per_seed_base": [
+  67.83895833735257
+ ]
+}
