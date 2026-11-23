@@ -56,7 +56,28 @@ $jobs = @(
   @("ft_official_s1",         "official", 1,  @()),
   @("ft_zeroshot_s1",         "zeroshot", 1,  @()),
   @("ft_nomem_official_s1",   "official", 1,  @("--direct", "only")),
-  @("ft_nomem_zeroshot_s1",   "zeroshot", 1,  @("--direct", "only"))
+  @("ft_nomem_zeroshot_s1",   "zeroshot", 1,  @("--direct", "only")),
+  # memory-contribution pilots (seed 42): path dropout, direct scorer on memory outputs, longer training
+  @("ftp_gdn_pd_official",     "official", 42, (@("--layout", "gg", "--path-drop", "0.3") + $P)),
+  @("ftp_gdn_pd_zeroshot",     "zeroshot", 42, (@("--layout", "gg", "--path-drop", "0.3") + $P)),
+  @("ftp_gdn_dmem_official",   "official", 42, (@("--layout", "gg", "--direct-src", "mem") + $P)),
+  @("ftp_gdn_dmem_zeroshot",   "zeroshot", 42, (@("--layout", "gg", "--direct-src", "mem") + $P)),
+  @("ftp_gdn_e15_official",    "official", 42, (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_nomem_e15_official",  "official", 42, (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
+  # 15-epoch retraining: final model (3 splits) and no-memory ablation (official, zero-shot), 3 seeds
+  @("ftp_gdn_e15_official_s1",   "official", 1,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_nomem_e15_official_s1", "official", 1,  (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_zeroshot",      "zeroshot", 42, (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_nomem_e15_zeroshot",    "zeroshot", 42, (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_official_s2",   "official", 2,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_nomem_e15_official_s2", "official", 2,  (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_zeroshot_s1",   "zeroshot", 1,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_nomem_e15_zeroshot_s1", "zeroshot", 1,  (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_zeroshot_s2",   "zeroshot", 2,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_nomem_e15_zeroshot_s2", "zeroshot", 2,  (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_grouped",       "grouped",  42, (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_grouped_s1",    "grouped",  1,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  @("ftp_gdn_e15_grouped_s2",    "grouped",  2,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P))
 )
 foreach ($j in $jobs) {
   if ($args.Count -and -not ($args -contains $j[0])) { continue }

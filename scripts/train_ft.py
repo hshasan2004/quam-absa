@@ -66,6 +66,10 @@ def parse():
     ap.add_argument("--readout", default="hybrid")
     ap.add_argument("--id-drop", type=float, default=0.2)
     ap.add_argument("--direct", choices=["add", "only", "off"], default="add", help="only: no xLSTM memory (ablation)")
+    ap.add_argument("--path-drop", type=float, default=0.0,
+                    help="training: hide the direct scores of an aspect with this probability (memory must predict alone)")
+    ap.add_argument("--direct-src", choices=["enc", "mem"], default="enc",
+                    help="direct scorer features from the encoder states (enc) or from the memory token outputs (mem)")
     ap.add_argument("--overall-weight", type=float, default=0.5)
     ap.add_argument("--babsa-neg", type=int, default=3)
     ap.add_argument("--cons-weight", type=float, default=0.0)
@@ -165,7 +169,7 @@ class QuAMFT(nn.Module):
         self.head = QuAM(h, cache.query(OVERALL_QUERY), stats, d_model=args.d_model, heads=args.heads,
                          layout=args.layout, readout=args.readout, direct=args.direct,
                          aspect_vocab=eco_vocab() if args.data == "eco" else (), id_drop=args.id_drop,
-                         direct_raw=True)
+                         direct_raw=True, path_drop=args.path_drop, direct_src=args.direct_src)
 
     def forward(self, b):
         hs = self.enc(input_ids=b["tok_ids"], attention_mask=b["att"]).last_hidden_state

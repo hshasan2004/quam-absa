@@ -66,14 +66,21 @@ class Standardize(nn.Module):
 class QuAM(nn.Module):
     def __init__(self, enc_dim, overall_query, stats, d_model=256, heads=4, layout="mmsm", dropout=0.1,
                  presence_mode="mag+value", use_domain=True, readout="memory", query_init="free",
-                 direct="off", aspect_vocab=(), direct_dim=1024, id_drop=0.2, direct_raw=False):
+                 direct="off", aspect_vocab=(), direct_dim=1024, id_drop=0.2, direct_raw=False,
+                 path_drop=0.0, direct_src="enc"):
         super().__init__()
         assert presence_mode in PRESENCE_MODES and readout in READOUTS
-        assert query_init in QUERY_INITS and direct in DIRECT_MODES
+        assert query_init in QUERY_INITS and direct in DIRECT_MODES and direct_src in ("enc", "mem")
         self.direct, self.id_drop, self.direct_raw = direct, id_drop, direct_raw
+        # path_drop: in training, hide the direct scores of an aspect with this probability, so the memory
+        #   read has to predict on its own (otherwise it only learns the residual of the direct scorer).
+        # direct_src: "enc" = direct features g from the encoder states; "mem" = from the memory's token
+        #   outputs, so every prediction passes through the memory.
+        self.path_drop, self.direct_src = path_drop, direct_src
         if direct != "off":
             self.aspect_vocab = {n: i + 1 for i, n in enumerate(aspect_vocab)}
-            self.g = nn.Sequential(nn.LayerNorm(2 * enc_dim), nn.Linear(2 * enc_dim, direct_dim), nn.GELU(),
+            g_in = 2 * (d_model if direct_src == "mem" else enc_dim)
+            self.g = nn.Sequential(nn.LayerNorm(g_in), nn.Linear(g_in, direct_dim), nn.GELU(),
                                    nn.Dropout(dropout))
             self.d_pres = AspectScorer(len(aspect_vocab), enc_dim, direct_dim, 1)
             self.d_sent = AspectScorer(len(aspect_vocab), enc_dim, direct_dim, 3)
@@ -162,7 +169,10 @@ class QuAM(nn.Module):
         pres = self.pres_head(pres_in).squeeze(-1)
         d_overall = 0.0
         if self.direct != "off":
-            xs, m0 = (x.float() if self.direct_raw else self.tok_std(x)), batch["mask"].float()[..., None]
+            if self.direct_src == "mem":
+                xs, m0 = tokens.float(), mask.float()[..., None]
+            else:
+                xs, m0 = (x.float() if self.direct_raw else self.tok_std(x)), batch["mask"].float()[..., None]
             g = self.g(torch.cat([xs[:, 0], (xs * m0).sum(1) / m0.sum(1).clamp(min=1)], -1))
             A0 = aq.shape[1]
             ids = torch.zeros(B, A0, dtype=torch.long)
@@ -176,6 +186,9 @@ class QuAM(nn.Module):
             if self.direct == "only":
                 pres, sent = dp, ds
             else:
+                if self.training and self.path_drop > 0:
+                    keep = (torch.rand(dp.shape, device=dp.device) >= self.path_drop).to(dp.dtype)
+                    dp, ds = dp * keep, ds * keep[..., None]
                 pres, sent = pres + dp, sent + ds
             d_overall = self.d_overall(g)
         no_neu = ~batch["allow_neutral"].to(sent.device)
