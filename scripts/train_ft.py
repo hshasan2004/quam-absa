@@ -54,6 +54,11 @@ def parse():
                     " bn (Bangla script), bl (Banglish)")
     ap.add_argument("--kb-shuffle", action="store_true", help="control: give each aspect the KB forms of another"
                     " (random) aspect -- same extra tokens, wrong meaning")
+    ap.add_argument("--kb-k", type=int, default=8, help="max retrieved forms per aspect (scored KB)")
+    ap.add_argument("--form-gate", action="store_true",
+                    help="RAMP-R evidence-gated read-out: each retrieved form gets its own span vector; a gate "
+                         "from (form-review match, retrieval score, form-name agreement) decides how much of it "
+                         "is added to the aspect vector, so noisy retrievals can be ignored")
     ap.add_argument("--aspect-read", choices=["span", "marker"], default="span",
                     help="span: mean over the aspect-name tokens; marker: the separator token before the name (TMM-style)")
     ap.add_argument("--epochs", type=int, default=10)
@@ -102,11 +107,26 @@ class NoTokens:
 
 
 class TextDataset(ABSADataset):
-    def __init__(self, *a, tok, max_len, prompt, marker=False, kb=None, **kw):
+    def __init__(self, *a, tok, max_len, prompt, marker=False, kb=None, kb_score=None, form_gate=False, **kw):
         super().__init__(*a, **kw)
         self.tok, self.max_len, self.prompt, self.marker = tok, max_len, prompt, marker
-        self.kb = kb or {}
+        self.kb, self.kb_score, self.form_gate = kb or {}, kb_score or {}, form_gate
         self._piece = {}
+
+    def entry_pieces(self, name):
+        """Token ids of 'name ( f1 ; f2 ; ... )' built piece by piece, with the span of each form."""
+        ids, forms = list(self.piece(name)), []
+        fs = self.kb.get(name, [])
+        if fs:
+            ids += self.piece("(")
+            for k, f in enumerate(fs):
+                if k:
+                    ids += self.piece(";")
+                p = self.piece(f)
+                forms.append((len(ids), len(ids) + len(p)))
+                ids += p
+            ids += self.piece(")")
+        return ids, forms
 
     def entry(self, name):
         """Aspect name plus its retrieved multi-script forms: 'range ( coverage ; রেঞ্জ ; renj )'."""
@@ -129,14 +149,22 @@ class TextDataset(ABSADataset):
             if r["dataset"] == "babsa":       # gold aspects come first, sampled absent ones last: hide that order
                 random.Random(hash((self.seed, self.epoch if self.train else -1, idx, 7919))).shuffle(order)
             spans = [None] * len(names)
+            fspans, fprior = [[] for _ in names], [[] for _ in names]
             for k, j in enumerate(order):
                 if k:
                     ids += self.piece("|")
-                p = self.piece(self.entry(names[j]))
+                if self.form_gate:
+                    p, fs = self.entry_pieces(names[j])
+                    fspans[j] = [(len(ids) + s, len(ids) + e) for s, e in fs]
+                    fprior[j] = self.kb_score.get(names[j], [0.0] * len(fs))[: len(fs)]
+                else:
+                    p = self.piece(self.entry(names[j]))
                 spans[j] = (len(ids) - 1, len(ids)) if self.marker else (len(ids), len(ids) + len(p))
                 ids += p
+            item["form_spans"], item["form_prior"] = fspans, fprior
         sep2 = [t.sep_token_id, t.sep_token_id] if "roberta" in type(t).__name__.lower() else [t.sep_token_id]
         room = 512 - len(ids) - len(sep2) - 1          # encoder limit (long KB prompts)
+        item["rev_start"] = len(ids) + len(sep2)
         ids += sep2 + self.piece(r["text"])[: min(self.max_len, room)] + [t.sep_token_id]
         item["tok_ids"], item["spans"] = ids, spans
         return item
@@ -157,6 +185,17 @@ def make_collate(pad_id, prompt):
                 for j, (s, e) in enumerate(b["spans"]):
                     W[i, j, s:e] = 1.0 / max(e - s, 1)
             out["span_w"] = W
+            if "form_spans" in batch[0] and any(fs for b in batch for fs in b["form_spans"]):
+                K = max(len(fs) for b in batch for fs in b["form_spans"])
+                FW, fm, fp = torch.zeros(B, A, K, L), torch.zeros(B, A, K), torch.zeros(B, A, K)
+                rev = torch.zeros(B, L)
+                for i, b in enumerate(batch):
+                    rev[i, b["rev_start"]:len(b["tok_ids"]) - 1] = 1
+                    for j, fs in enumerate(b["form_spans"]):
+                        for k, (s, e) in enumerate(fs):
+                            FW[i, j, k, s:e] = 1.0 / max(e - s, 1); fm[i, j, k] = 1
+                            fp[i, j, k] = b["form_prior"][j][k] if k < len(b["form_prior"][j]) else 0.0
+                out["form_w"], out["form_mask"], out["form_prior"], out["rev_mask"] = FW, fm, fp, rev
         return out
     return col
 
@@ -179,6 +218,13 @@ class QuAMFT(nn.Module):
             self.ctx_ln = nn.LayerNorm(h)
             self.register_buffer("q_mean", stats["q_mean"].float().clone())
             self.register_buffer("q_sd", stats["q_std"].float().clone())
+        self.form_gate = getattr(args, "form_gate", False)
+        if self.form_gate:
+            # gate_k = sigmoid(w . [evidence_k, prior_k, agree_k] + b); starts trusting forms found in the review
+            self.gate = nn.Linear(3, 1)
+            with torch.no_grad():
+                self.gate.weight.copy_(torch.tensor([[4.0, 0.5, 1.0]])); self.gate.bias.fill_(-2.0)
+            self.form_ln = nn.LayerNorm(h)
         self.head = QuAM(h, cache.query(OVERALL_QUERY), stats, d_model=args.d_model, heads=args.heads,
                          layout=args.layout, readout=args.readout, direct=args.direct,
                          aspect_vocab=eco_vocab() if args.data == "eco" else (), id_drop=args.id_drop,
@@ -189,9 +235,24 @@ class QuAMFT(nn.Module):
         b = dict(b, x=hs, mask=b["att"].bool())
         if self.prompt:
             ctx = torch.einsum("bal,bld->bad", b["span_w"].to(hs.dtype), hs).float()
+            if self.form_gate and "form_w" in b:
+                ctx = ctx + self.gated_forms(hs, ctx, b)
             # the head z-scores queries with the cache statistics; invert that so it sees LN(ctx)
             b["aq"] = self.q_mean + self.q_sd * self.ctx_ln(ctx)
         return self.head(b)
+
+    def gated_forms(self, hs, ctx, b):
+        """Evidence-gated sum of the retrieved forms' span vectors (B, A, h)."""
+        F_ = torch.einsum("bakl,bld->bakd", b["form_w"].to(hs.dtype), hs).float()          # form vectors
+        fm = b["form_mask"]
+        Fn = nn.functional.normalize(self.form_ln(F_), dim=-1)
+        Hn = nn.functional.normalize(self.form_ln(hs.float()), dim=-1)
+        sim = torch.einsum("bakd,bld->bakl", Fn, Hn).masked_fill(b["rev_mask"][:, None, None] == 0, -1.0)
+        evidence = sim.amax(-1)                                       # does this form occur in the review?
+        agree = (Fn * nn.functional.normalize(self.form_ln(ctx), dim=-1)[:, :, None]).sum(-1)
+        g = torch.sigmoid(self.gate(torch.stack([evidence, b["form_prior"], agree], -1)).squeeze(-1)) * fm
+        self.last_gate = g.detach()
+        return (g[..., None] * F_).sum(2) / (1.0 + g.sum(2, keepdim=True))
 
 
 def slice_batch(b, s, e):
@@ -207,6 +268,8 @@ def slice_batch(b, s, e):
     out["tok_ids"], out["att"] = out["tok_ids"][:, :L], out["att"][:, :L]
     if "span_w" in out:
         out["span_w"] = out["span_w"][:, :, :L]
+    if "form_w" in out:
+        out["form_w"], out["rev_mask"] = out["form_w"][..., :L], out["rev_mask"][:, :L]
     return out
 
 
@@ -242,11 +305,17 @@ def main():
     for r in recs:
         r["splits"]["_run"] = r["splits"][args.eco_split] if r["dataset"] == "eco" else r["splits"]["grouped"]
     tok = AutoTokenizer.from_pretrained(args.model)
-    kb = None
+    kb = kb_score = None
     if args.aspect_kb:
         fields = args.kb_scripts.split(",")
         raw = json.loads(Path(args.aspect_kb).read_text(encoding="utf-8"))
-        kb = {k: [x for fl in fields for x in v.get(fl, [])] for k, v in raw.items() if not k.startswith("_")}
+        raw = {k: v for k, v in raw.items() if not k.startswith("_")}
+        if raw and isinstance(next(iter(raw.values())), list):       # retrieved (scored) KB from build_rag_kb.py
+            kb = {k: [x["form"] for x in v[: args.kb_k]] for k, v in raw.items()}
+            kb_score = {k: [float(x["score"]) for x in v[: args.kb_k]] for k, v in raw.items()}
+        else:
+            kb = {k: [x for fl in fields for x in v.get(fl, [])] for k, v in raw.items()}
+            kb_score = {k: [1.0] * len(v) for k, v in kb.items()}
         if args.kb_shuffle:
             keys = sorted(kb)
             perm = keys[:]
@@ -255,7 +324,7 @@ def main():
                 rng.shuffle(perm)
             kb = {k: kb[p] for k, p in zip(keys, perm)}
         log(f"aspect KB: {len(kb)} entries, fields {fields}, shuffled={args.kb_shuffle}")
-    kw = dict(kb=kb, babsa_pool=pool, babsa_neg=args.babsa_neg, seed=args.seed, tok=tok, max_len=args.max_len,
+    kw = dict(kb=kb, kb_score=kb_score if kb else None, form_gate=args.form_gate, babsa_pool=pool, babsa_neg=args.babsa_neg, seed=args.seed, tok=tok, max_len=args.max_len,
               prompt=args.prompt_aspects, marker=args.aspect_read == "marker", limit=args.limit or None)
     proxy = NoTokens(cache)
     ds = {p: TextDataset(recs, proxy, "_run", p, train=(p == "train"), **kw) for p in ("train", "val", "test")}
@@ -329,8 +398,17 @@ def main():
             if bad >= args.patience:
                 log(f"early stop (no improvement for {args.patience} epochs)"); break
 
+    torch.save(best_state, run / "best.pt")             # so a crash in the test pass does not lose training
     model.load_state_dict(best_state)
-    a, rv = evaluate(model, test_dl, dev)
+    for attempt in range(3):                             # 4 GB GPU: transient CUDA errors happen; retry smaller
+        try:
+            a, rv = evaluate(model, test_dl if attempt == 0 else mk(ds["test"], 8, False, 0), dev)
+            break
+        except RuntimeError as err:
+            log(f"test pass failed ({err}); retry {attempt + 1}")
+            torch.cuda.empty_cache(); time.sleep(30)
+    else:
+        raise RuntimeError("test pass failed 3 times; best.pt is saved")
     thr = best_val.get("eco", {}).get("threshold")
     test = score(a, rv, args.data, threshold=thr)
     if "eco" in test:

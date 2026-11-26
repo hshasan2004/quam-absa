@@ -99,7 +99,10 @@ $jobs = @(
   @("kb_zeroshot_s2",     "zeroshot", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P)),
   @("kbshuf_zeroshot_s2", "zeroshot", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-shuffle", "--max-tokens", "1024") + $P)),
   @("kben_zeroshot_s2",   "zeroshot", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-scripts", "en", "--max-tokens", "1024") + $P)),
-  @("kb_official_s2",     "official", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P))
+  @("kb_official_s2",     "official", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P)),
+  # RAMP-R: automatic cross-script retrieval (build_rag_kb.py) + evidence-gated read-out
+  @("rag_zeroshot",       "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/rag_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--max-tokens", "1024") + $P)),
+  @("rag2_zeroshot",       "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--max-tokens", "1024") + $P))
 )
 foreach ($j in $jobs) {
   if ($args.Count -and -not ($args -contains $j[0])) { continue }
