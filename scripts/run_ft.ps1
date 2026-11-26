@@ -2,6 +2,7 @@
 # Usage: powershell -File scripts\run_ft.ps1 [job names...]
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $py = "C:\Users\USER\.venvs\quam-absa\Scripts\python.exe"
+$env:PYTORCH_CUDA_ALLOC_CONF = "expandable_segments:True"
 $P = @("--prompt-aspects")
 # ftp_* = main model (aspect-prompted QuAM-FT), 3 seeds; ft_* = no-prompt ablation, seed 42
 $jobs = @(
@@ -77,7 +78,28 @@ $jobs = @(
   @("ftp_nomem_e15_zeroshot_s2", "zeroshot", 2,  (@("--direct", "only", "--epochs", "15", "--patience", "4") + $P)),
   @("ftp_gdn_e15_grouped",       "grouped",  42, (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
   @("ftp_gdn_e15_grouped_s1",    "grouped",  1,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
-  @("ftp_gdn_e15_grouped_s2",    "grouped",  2,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P))
+  @("ftp_gdn_e15_grouped_s2",    "grouped",  2,  (@("--layout", "gg", "--epochs", "15", "--patience", "4") + $P)),
+  # retrieval-augmented multi-script aspect prompting (no memory): full KB, and English-synonym-only KB
+#OBSOLETE   @("kb_official",     "official", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json") + $P)),
+  @("kb_zeroshot",     "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json") + $P)),
+  @("kben_zeroshot",   "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-scripts", "en") + $P)),
+  # control: same extra tokens, but each aspect gets another aspect's forms
+  @("kbshuf_zeroshot", "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-shuffle") + $P)),
+  # official split with a smaller micro-batch (the first try failed with a CUDA error on long prompts)
+#OBSOLETE   @("kb_official_b",   "official", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1536") + $P)),
+  # script-only knowledge (no English synonyms): does Bangla/Banglish alone help?
+  @("kbbnbl_zeroshot", "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-scripts", "bn,bl") + $P)),
+  # official split again: kb_official_b ran out of GPU memory at epoch 7
+  @("kb_official_c",   "official", 42, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P)),
+  # seeds 1-2: full KB (zero-shot, official), English-only KB and shuffled control (zero-shot)
+  @("kb_zeroshot_s1",     "zeroshot", 1, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P)),
+  @("kbshuf_zeroshot_s1", "zeroshot", 1, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-shuffle", "--max-tokens", "1024") + $P)),
+  @("kben_zeroshot_s1",   "zeroshot", 1, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-scripts", "en", "--max-tokens", "1024") + $P)),
+  @("kb_official_s1",     "official", 1, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P)),
+  @("kb_zeroshot_s2",     "zeroshot", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P)),
+  @("kbshuf_zeroshot_s2", "zeroshot", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-shuffle", "--max-tokens", "1024") + $P)),
+  @("kben_zeroshot_s2",   "zeroshot", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--kb-scripts", "en", "--max-tokens", "1024") + $P)),
+  @("kb_official_s2",     "official", 2, (@("--direct", "only", "--aspect-kb", "data\aspect_kb.json", "--max-tokens", "1024") + $P))
 )
 foreach ($j in $jobs) {
   if ($args.Count -and -not ($args -contains $j[0])) { continue }

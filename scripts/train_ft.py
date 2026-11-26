@@ -48,6 +48,12 @@ def parse():
     ap.add_argument("--model", default="xlm-roberta-base")
     ap.add_argument("--cache", default=str(PAIRED), help="only used for aspect-name / category query vectors")
     ap.add_argument("--prompt-aspects", action="store_true")
+    ap.add_argument("--aspect-kb", default="", help="multi-script aspect knowledge base (JSON); retrieved forms are"
+                    " written next to each aspect name in the prompt and read together with it")
+    ap.add_argument("--kb-scripts", default="en,bn,bl", help="which KB fields to retrieve: en (English synonyms),"
+                    " bn (Bangla script), bl (Banglish)")
+    ap.add_argument("--kb-shuffle", action="store_true", help="control: give each aspect the KB forms of another"
+                    " (random) aspect -- same extra tokens, wrong meaning")
     ap.add_argument("--aspect-read", choices=["span", "marker"], default="span",
                     help="span: mean over the aspect-name tokens; marker: the separator token before the name (TMM-style)")
     ap.add_argument("--epochs", type=int, default=10)
@@ -96,10 +102,16 @@ class NoTokens:
 
 
 class TextDataset(ABSADataset):
-    def __init__(self, *a, tok, max_len, prompt, marker=False, **kw):
+    def __init__(self, *a, tok, max_len, prompt, marker=False, kb=None, **kw):
         super().__init__(*a, **kw)
         self.tok, self.max_len, self.prompt, self.marker = tok, max_len, prompt, marker
+        self.kb = kb or {}
         self._piece = {}
+
+    def entry(self, name):
+        """Aspect name plus its retrieved multi-script forms: 'range ( coverage ; রেঞ্জ ; renj )'."""
+        forms = self.kb.get(name)
+        return f"{name} ( {' ; '.join(forms)} )" if forms else name
 
     def piece(self, s):
         if s not in self._piece:
@@ -120,11 +132,12 @@ class TextDataset(ABSADataset):
             for k, j in enumerate(order):
                 if k:
                     ids += self.piece("|")
-                p = self.piece(names[j])
+                p = self.piece(self.entry(names[j]))
                 spans[j] = (len(ids) - 1, len(ids)) if self.marker else (len(ids), len(ids) + len(p))
                 ids += p
         sep2 = [t.sep_token_id, t.sep_token_id] if "roberta" in type(t).__name__.lower() else [t.sep_token_id]
-        ids += sep2 + self.piece(r["text"])[: self.max_len] + [t.sep_token_id]
+        room = 512 - len(ids) - len(sep2) - 1          # encoder limit (long KB prompts)
+        ids += sep2 + self.piece(r["text"])[: min(self.max_len, room)] + [t.sep_token_id]
         item["tok_ids"], item["spans"] = ids, spans
         return item
 
@@ -229,7 +242,20 @@ def main():
     for r in recs:
         r["splits"]["_run"] = r["splits"][args.eco_split] if r["dataset"] == "eco" else r["splits"]["grouped"]
     tok = AutoTokenizer.from_pretrained(args.model)
-    kw = dict(babsa_pool=pool, babsa_neg=args.babsa_neg, seed=args.seed, tok=tok, max_len=args.max_len,
+    kb = None
+    if args.aspect_kb:
+        fields = args.kb_scripts.split(",")
+        raw = json.loads(Path(args.aspect_kb).read_text(encoding="utf-8"))
+        kb = {k: [x for fl in fields for x in v.get(fl, [])] for k, v in raw.items() if not k.startswith("_")}
+        if args.kb_shuffle:
+            keys = sorted(kb)
+            perm = keys[:]
+            rng = random.Random(0)
+            while any(a == b for a, b in zip(keys, perm)):      # derangement: no aspect keeps its own forms
+                rng.shuffle(perm)
+            kb = {k: kb[p] for k, p in zip(keys, perm)}
+        log(f"aspect KB: {len(kb)} entries, fields {fields}, shuffled={args.kb_shuffle}")
+    kw = dict(kb=kb, babsa_pool=pool, babsa_neg=args.babsa_neg, seed=args.seed, tok=tok, max_len=args.max_len,
               prompt=args.prompt_aspects, marker=args.aspect_read == "marker", limit=args.limit or None)
     proxy = NoTokens(cache)
     ds = {p: TextDataset(recs, proxy, "_run", p, train=(p == "train"), **kw) for p in ("train", "val", "test")}
