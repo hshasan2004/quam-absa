@@ -105,7 +105,15 @@ $jobs = @(
   @("rag2_zeroshot",       "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--max-tokens", "1024") + $P)),
   @("rag2nogate_zeroshot",       "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--max-tokens", "1024") + $P)),
   @("kbgate_zeroshot",   "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/aspect_kb.json", "--kb-k", "99", "--form-gate", "--max-tokens", "1024") + $P)),
-  @("rag3_zeroshot",     "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P))
+  @("rag3_zeroshot",     "zeroshot", 42, (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P)),
+  # final RAMP-R (rag3 config): seeds 1-2 zero-shot, official x3, then rag2 seeds 1-2 (noisy-OR ablation)
+  @("rag3_zeroshot_s1",  "zeroshot", 1,  (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P)),
+  @("rag3_zeroshot_s2",  "zeroshot", 2,  (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P)),
+  @("rag3_official",     "official", 42, (@("--direct", "only", "--aspect-kb", "data/rag2_kb_official.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P)),
+  @("rag3_official_s1",  "official", 1,  (@("--direct", "only", "--aspect-kb", "data/rag2_kb_official.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P)),
+  @("rag3_official_s2",  "official", 2,  (@("--direct", "only", "--aspect-kb", "data/rag2_kb_official.json", "--kb-k", "4", "--form-gate", "--det-noisy-or", "--alias-drop", "0.3", "0.15", "--max-tokens", "1024") + $P)),
+  @("rag2_zeroshot_s1",  "zeroshot", 1,  (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--max-tokens", "1024") + $P)),
+  @("rag2_zeroshot_s2",  "zeroshot", 2,  (@("--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--max-tokens", "1024") + $P))
 #DROPPED (XLM-R only)   @("rag2bb_zeroshot",   "zeroshot", 42, (@("--model", "csebuetnlp/banglabert", "--direct", "only", "--aspect-kb", "data/rag2_kb_zeroshot.json", "--kb-k", "4", "--form-gate", "--max-tokens", "1024") + $P))
 )
 foreach ($j in $jobs) {

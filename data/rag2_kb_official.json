@@ -1,0 +1,1692 @@
+{
+ "_about": "automatic retrieval from official-train reviews only; phonetic+LaBSE+translation-pivot, RRF",
+ "_args": {
+  "split": "official",
+  "min_freq": 3,
+  "k": 4,
+  "per_script": 2,
+  "phon_min": 0.75,
+  "dense_min": 0.55,
+  "phon_dense_min": 0.5,
+  "dense_strict": 0.65,
+  "margin": 0.0,
+  "evid_min": 3,
+  "verify_min": 0.05,
+  "pivot_min": 0.3,
+  "pivot_dense_min": 0.45,
+  "pool": 30,
+  "out": "data/rag2_kb_official.json"
+ },
+ "accessories": [
+  {
+   "form": "add",
+   "score": 0.526,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.091
+  },
+  {
+   "form": "plus",
+   "score": 0.385,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.053
+  }
+ ],
+ "anc enc": [
+  {
+   "form": "anc কাজ",
+   "score": 1.909,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "onike",
+   "score": 0.588,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "app": [
+  {
+   "form": "অ্যাপ",
+   "score": 1.909,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.714
+  },
+  {
+   "form": "অ্যাপস",
+   "score": 1.667,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.75
+  }
+ ],
+ "audio": [
+  {
+   "form": "অডিও",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "stereo",
+   "score": 0.909,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.333
+  },
+  {
+   "form": "সাউন্ড সিস্টেম",
+   "score": 0.714,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.167
+  },
+  {
+   "form": "earphones sound",
+   "score": 0.556,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "authenticity": [
+  {
+   "form": "authentic",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.918
+  },
+  {
+   "form": "authentic best",
+   "score": 1.218,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "সঠিক",
+   "score": 0.4,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.05
+  },
+  {
+   "form": "সত্যি বলতে",
+   "score": 0.294,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.125
+  }
+ ],
+ "bass": [
+  {
+   "form": "বেস",
+   "score": 2.742,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.65
+  },
+  {
+   "form": "বেজ",
+   "score": 1.623,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.56
+  },
+  {
+   "form": "lagbe",
+   "score": 0.714,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.333
+  }
+ ],
+ "battery": [
+  {
+   "form": "ব্যাটারি",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.827
+  },
+  {
+   "form": "এর ব্যাটারি",
+   "score": 2.024,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "powerbank",
+   "score": 0.455,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.091
+  },
+  {
+   "form": "bolchi",
+   "score": 0.417,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.667
+  }
+ ],
+ "bluetooth": [
+  {
+   "form": "ব্লুটুথ",
+   "score": 2.833,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.882
+  },
+  {
+   "form": "একটা ব্লুটুথ",
+   "score": 1.667,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "blue switch",
+   "score": 0.909,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 1.0
+  }
+ ],
+ "build": [
+  {
+   "form": "বিল্ড",
+   "score": 2.357,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.639
+  },
+  {
+   "form": "built",
+   "score": 1.818,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.385
+  },
+  {
+   "form": "break",
+   "score": 0.833,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.667
+  },
+  {
+   "form": "তৈরি",
+   "score": 0.714,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.0
+  }
+ ],
+ "cable": [
+  {
+   "form": "ক্যাবল",
+   "score": 2.5,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.9
+  },
+  {
+   "form": "কেবলের",
+   "score": 2.25,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.833
+  },
+  {
+   "form": "wire",
+   "score": 1.092,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.35
+  },
+  {
+   "form": "wired",
+   "score": 0.714,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.125
+  }
+ ],
+ "capacity": [
+  {
+   "form": "ক্যাপাসিটি",
+   "score": 2.263,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "পারছে",
+   "score": 0.278,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.25
+  }
+ ],
+ "charger": [
+  {
+   "form": "চার্জার",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.979
+  },
+  {
+   "form": "চার্জারটা",
+   "score": 2.177,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "charge korar",
+   "score": 0.885,
+   "src": "pivot+phon",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "charging adapter",
+   "score": 0.825,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 1.0
+  }
+ ],
+ "charging": [
+  {
+   "form": "চার্জিং",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.877
+  },
+  {
+   "form": "charge",
+   "score": 1.603,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.721
+  },
+  {
+   "form": "চার্জ",
+   "score": 1.534,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.688
+  },
+  {
+   "form": "fast charge",
+   "score": 0.667,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.981
+  }
+ ],
+ "clarity": [],
+ "click buttons": [
+  {
+   "form": "বাটন",
+   "score": 1.588,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.711
+  },
+  {
+   "form": "button",
+   "score": 1.576,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.642
+  },
+  {
+   "form": "clicks",
+   "score": 1.526,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "বাটনগুলো",
+   "score": 1.5,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.833
+  }
+ ],
+ "comfort": [
+  {
+   "form": "আরামদায়ক",
+   "score": 1.909,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "কমফোর্ট",
+   "score": 1.909,
+   "src": "pivot+phon",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "uncomfortable",
+   "score": 0.435,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.125
+  }
+ ],
+ "comfort design": [
+  {
+   "form": "ergonomic",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.8
+  }
+ ],
+ "comfort fit": [
+  {
+   "form": "ফিট",
+   "score": 1.678,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.333
+  },
+  {
+   "form": "ফিট হয়",
+   "score": 1.667,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 1.0
+  }
+ ],
+ "compatibility": [
+  {
+   "form": "compatible",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "compared",
+   "score": 1.27,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.667
+  },
+  {
+   "form": "তুলনামূলক",
+   "score": 0.97,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "কম্প্যাক্ট",
+   "score": 0.714,
+   "src": "pivot",
+   "script": "bn",
+   "pivot": 1.0
+  }
+ ],
+ "connectivity": [
+  {
+   "form": "কানেক্ট হতে",
+   "score": 2.025,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "connection",
+   "score": 1.833,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.794
+  },
+  {
+   "form": "কানেক্ট",
+   "score": 1.714,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.782
+  },
+  {
+   "form": "connect",
+   "score": 1.576,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.857
+  }
+ ],
+ "connector": [
+  {
+   "form": "connects",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "t connect",
+   "score": 1.576,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "সংযুক্ত",
+   "score": 0.714,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.333
+  },
+  {
+   "form": "link এর",
+   "score": 0.588,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.25
+  }
+ ],
+ "controls": [
+  {
+   "form": "control",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 0.65
+  },
+  {
+   "form": "কন্ট্রোল",
+   "score": 2.727,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.545
+  },
+  {
+   "form": "কন্ট্রোল করা",
+   "score": 1.667,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.75
+  },
+  {
+   "form": "gesture control",
+   "score": 1.224,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.667
+  }
+ ],
+ "corruption": [
+  {
+   "form": "distortion",
+   "score": 0.625,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  },
+  {
+   "form": "wastage",
+   "score": 0.588,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "data": [
+  {
+   "form": "ডেটা",
+   "score": 2.833,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "ডাটা ক্যাবল",
+   "score": 1.534,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "tarikh",
+   "score": 0.769,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "delivery": [
+  {
+   "form": "ডেলিভারি",
+   "score": 2.769,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.823
+  },
+  {
+   "form": "ডেলিভারিতে",
+   "score": 1.416,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.917
+  },
+  {
+   "form": "sending",
+   "score": 0.714,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.1
+  },
+  {
+   "form": "shipping",
+   "score": 0.625,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.143
+  }
+ ],
+ "design": [
+  {
+   "form": "ডিজাইন",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.692
+  },
+  {
+   "form": "well designed",
+   "score": 1.818,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.667
+  }
+ ],
+ "display": [
+  {
+   "form": "ডিসপ্লে",
+   "score": 2.625,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.714
+  },
+  {
+   "form": "দেখাবে",
+   "score": 0.588,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.333
+  }
+ ],
+ "durability": [
+  {
+   "form": "durable",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 0.867
+  },
+  {
+   "form": "টেকসই",
+   "score": 0.909,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.273
+  },
+  {
+   "form": "টেকসই না",
+   "score": 0.588,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.333
+  }
+ ],
+ "durability and quality": [
+  {
+   "form": "এবং কোয়ালিটি",
+   "score": 0.909,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.167
+  }
+ ],
+ "features": [
+  {
+   "form": "feature",
+   "score": 1.909,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.812
+  },
+  {
+   "form": "ফিচার",
+   "score": 1.909,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "সুবিধা",
+   "score": 0.769,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.1
+  },
+  {
+   "form": "aspects",
+   "score": 0.714,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "firmware": [
+  {
+   "form": "ফার্মওয়্যার",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.667
+  }
+ ],
+ "heat": [
+  {
+   "form": "joto",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.667
+  },
+  {
+   "form": "সময় গরম",
+   "score": 1.385,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "হিট",
+   "score": 1.37,
+   "src": "phon+dense",
+   "script": "bn",
+   "pivot": 0.2
+  },
+  {
+   "form": "thermal",
+   "score": 0.769,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "heating": [
+  {
+   "form": "হিটিং",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  }
+ ],
+ "indicator": [
+  {
+   "form": "ইন্ডিকেটর",
+   "score": 2.833,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.714
+  },
+  {
+   "form": "indicate",
+   "score": 1.818,
+   "src": "phon+dense",
+   "script": "lat",
+   "pivot": 0.333
+  }
+ ],
+ "keys": [
+  {
+   "form": "key",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.303
+  },
+  {
+   "form": "keyboard looks",
+   "score": 0.909,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.5
+  }
+ ],
+ "layout": [
+  {
+   "form": "format",
+   "score": 0.833,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "length": [
+  {
+   "form": "বেশিদিন",
+   "score": 0.476,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.0
+  },
+  {
+   "form": "short",
+   "score": 0.294,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.091
+  }
+ ],
+ "lighting": [
+  {
+   "form": "লাইটিং",
+   "score": 2.31,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "light",
+   "score": 1.769,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.901
+  },
+  {
+   "form": "lights",
+   "score": 1.678,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.778
+  },
+  {
+   "form": "আলো",
+   "score": 1.625,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.6
+  }
+ ],
+ "low light": [
+  {
+   "form": "হালকা",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.797
+  },
+  {
+   "form": "অনেক হালকা",
+   "score": 1.5,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.833
+  },
+  {
+   "form": "dark",
+   "score": 0.786,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.667
+  },
+  {
+   "form": "lite",
+   "score": 0.556,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.25
+  }
+ ],
+ "mic": [
+  {
+   "form": "মাইক",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.625
+  }
+ ],
+ "microphone": [
+  {
+   "form": "মাইক্রোফোন",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.938
+  },
+  {
+   "form": "মাইক্রোফোনের",
+   "score": 2.367,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.8
+  }
+ ],
+ "motion": [
+  {
+   "form": "মোশন",
+   "score": 2.769,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.889
+  }
+ ],
+ "network": [
+  {
+   "form": "নেটওয়ার্ক",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.857
+  },
+  {
+   "form": "নেটওয়ার্ক পায়",
+   "score": 2.269,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "net",
+   "score": 0.714,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.125
+  },
+  {
+   "form": "internet",
+   "score": 0.667,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.133
+  }
+ ],
+ "night view": [
+  {
+   "form": "নাইট",
+   "score": 1.833,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "নাইট ভিশন",
+   "score": 1.769,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "vision",
+   "score": 1.678,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 1.0
+  }
+ ],
+ "noise": [
+  {
+   "form": "একদমই বাজে",
+   "score": 1.0,
+   "src": "pivot",
+   "script": "bn",
+   "pivot": 0.5
+  }
+ ],
+ "noise cancellation": [
+  {
+   "form": "সাউন্ড ক্লিয়ার",
+   "score": 1.0,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.143
+  }
+ ],
+ "packaging": [
+  {
+   "form": "প্যাকেজিং",
+   "score": 2.623,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.838
+  },
+  {
+   "form": "packing",
+   "score": 2.268,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 0.81
+  },
+  {
+   "form": "প্যাকিং",
+   "score": 1.744,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.76
+  },
+  {
+   "form": "package",
+   "score": 1.576,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.914
+  }
+ ],
+ "paper": [
+  {
+   "form": "পেপার",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.727
+  },
+  {
+   "form": "কাগজ",
+   "score": 1.909,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "ink",
+   "score": 0.455,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "note",
+   "score": 0.323,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.05
+  }
+ ],
+ "performance": [
+  {
+   "form": "পারফরম্যান্স",
+   "score": 2.742,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.706
+  },
+  {
+   "form": "performs",
+   "score": 1.984,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "পারফরম্যান্স দেয়",
+   "score": 1.89,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "perform",
+   "score": 1.176,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.8
+  }
+ ],
+ "photo": [
+  {
+   "form": "ছবি",
+   "score": 1.0,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.077
+  },
+  {
+   "form": "ছবির",
+   "score": 0.833,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.1
+  },
+  {
+   "form": "hoto",
+   "score": 0.769,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.083
+  }
+ ],
+ "ports": [
+  {
+   "form": "পোর্টের",
+   "score": 2.667,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "port",
+   "score": 1.0,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.103
+  },
+  {
+   "form": "পোর্ট",
+   "score": 0.909,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.062
+  },
+  {
+   "form": "c port",
+   "score": 0.667,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.1
+  }
+ ],
+ "price": [
+  {
+   "form": "দাম",
+   "score": 2.0,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.794
+  },
+  {
+   "form": "প্রাইস",
+   "score": 1.7,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.652
+  },
+  {
+   "form": "cost",
+   "score": 0.4,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.286
+  },
+  {
+   "form": "value",
+   "score": 0.385,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.083
+  }
+ ],
+ "print": [
+  {
+   "form": "প্রিন্ট",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "প্রিন্টার",
+   "score": 2.587,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "mini printer",
+   "score": 0.833,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "best printer",
+   "score": 0.625,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 1.0
+  }
+ ],
+ "quality": [
+  {
+   "form": "কোয়ালিটি",
+   "score": 2.5,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.875
+  },
+  {
+   "form": "কোয়ালিটির",
+   "score": 1.78,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.8
+  },
+  {
+   "form": "top notch",
+   "score": 0.263,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.571
+  }
+ ],
+ "range": [
+  {
+   "form": "রেঞ্জ",
+   "score": 2.833,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.917
+  },
+  {
+   "form": "রেঞ্জের",
+   "score": 1.952,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "area",
+   "score": 0.625,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.2
+  },
+  {
+   "form": "limit",
+   "score": 0.556,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.2
+  }
+ ],
+ "reliability": [
+  {
+   "form": "reliable",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 0.778
+  },
+  {
+   "form": "ভরসা",
+   "score": 0.833,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.167
+  },
+  {
+   "form": "trusted",
+   "score": 0.714,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.062
+  }
+ ],
+ "resolution": [
+  {
+   "form": "রেজুলেশন",
+   "score": 2.833,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.75
+  },
+  {
+   "form": "solution",
+   "score": 1.909,
+   "src": "phon+dense",
+   "script": "lat",
+   "pivot": 0.167
+  }
+ ],
+ "scroll wheel": [
+  {
+   "form": "scrolling",
+   "score": 1.833,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.833
+  },
+  {
+   "form": "হুইল",
+   "score": 1.576,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.75
+  },
+  {
+   "form": "roller",
+   "score": 1.0,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.333
+  }
+ ],
+ "security": [
+  {
+   "form": "সিকিউরিটি",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.8
+  },
+  {
+   "form": "secure",
+   "score": 2.652,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 1.0
+  }
+ ],
+ "seller": [
+  {
+   "form": "সেলার",
+   "score": 2.27,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.72
+  },
+  {
+   "form": "সেলারকে",
+   "score": 1.654,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.741
+  },
+  {
+   "form": "supplier",
+   "score": 0.812,
+   "src": "phon+dense",
+   "script": "lat",
+   "pivot": 0.25
+  },
+  {
+   "form": "retailer",
+   "score": 0.769,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.333
+  }
+ ],
+ "sensors": [
+  {
+   "form": "sensor",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 1.0
+  },
+  {
+   "form": "সেন্সর",
+   "score": 2.727,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.833
+  },
+  {
+   "form": "sensitivity",
+   "score": 1.5,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.8
+  },
+  {
+   "form": "মনিটর",
+   "score": 0.833,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.0
+  }
+ ],
+ "setup": [
+  {
+   "form": "সেট আপ",
+   "score": 1.909,
+   "src": "phon+dense",
+   "script": "bn",
+   "pivot": 0.2
+  },
+  {
+   "form": "setting",
+   "score": 1.0,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.1
+  },
+  {
+   "form": "সেটিং",
+   "score": 0.833,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.167
+  },
+  {
+   "form": "default",
+   "score": 0.417,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.333
+  }
+ ],
+ "size": [
+  {
+   "form": "সাইজ",
+   "score": 2.909,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "সাইজ টা",
+   "score": 1.667,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "smaller",
+   "score": 0.714,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.333
+  },
+  {
+   "form": "big",
+   "score": 0.5,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.176
+  }
+ ],
+ "software": [
+  {
+   "form": "সফটওয়্যার",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.625
+  },
+  {
+   "form": "সফট",
+   "score": 2.485,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.5
+  },
+  {
+   "form": "tech",
+   "score": 0.714,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.05
+  }
+ ],
+ "sound": [
+  {
+   "form": "সাউন্ড",
+   "score": 2.603,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.902
+  },
+  {
+   "form": "এর সাউন্ড",
+   "score": 1.625,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.818
+  },
+  {
+   "form": "voice",
+   "score": 0.909,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.294
+  },
+  {
+   "form": "loud",
+   "score": 0.871,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.737
+  }
+ ],
+ "speed": [
+  {
+   "form": "স্পিড",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.78
+  },
+  {
+   "form": "এর স্পিড",
+   "score": 2.052,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "faster",
+   "score": 0.702,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.333
+  },
+  {
+   "form": "fastest",
+   "score": 0.5,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.167
+  }
+ ],
+ "stability": [
+  {
+   "form": "stable",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "lat",
+   "pivot": 0.889
+  },
+  {
+   "form": "static",
+   "score": 0.909,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  },
+  {
+   "form": "অস্থির",
+   "score": 0.769,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.05
+  },
+  {
+   "form": "অস্থির একটা",
+   "score": 0.714,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.167
+  }
+ ],
+ "strap": [
+  {
+   "form": "বেল্ট",
+   "score": 1.714,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.75
+  },
+  {
+   "form": "ঘড়ির",
+   "score": 0.909,
+   "src": "pivot",
+   "script": "bn",
+   "pivot": 0.333
+  }
+ ],
+ "text": [
+  {
+   "form": "মেসেজ",
+   "score": 0.556,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.25
+  },
+  {
+   "form": "লেখা উঠে",
+   "score": 0.526,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.25
+  },
+  {
+   "form": "sms",
+   "score": 0.417,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.167
+  }
+ ],
+ "video": [
+  {
+   "form": "ভিডিও",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.909
+  },
+  {
+   "form": "footage",
+   "score": 1.818,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.667
+  },
+  {
+   "form": "youtube",
+   "score": 0.833,
+   "src": "pivot",
+   "script": "lat",
+   "pivot": 0.333
+  },
+  {
+   "form": "রেকর্ড",
+   "score": 0.323,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.231
+  }
+ ],
+ "video quality": [
+  {
+   "form": "ভিডিও কোয়ালিটি",
+   "score": 3.0,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 1.0
+  },
+  {
+   "form": "পিকচার কোয়ালিটি",
+   "score": 0.769,
+   "src": "dense",
+   "script": "bn",
+   "pivot": 0.25
+  },
+  {
+   "form": "hd",
+   "score": 0.323,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.167
+  }
+ ],
+ "warranty": [
+  {
+   "form": "ওয়ারেন্টি",
+   "score": 2.623,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.77
+  },
+  {
+   "form": "ওয়ারেন্টি সহ",
+   "score": 1.764,
+   "src": "pivot+phon+dense",
+   "script": "bn",
+   "pivot": 0.667
+  },
+  {
+   "form": "guarantee",
+   "score": 1.0,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.333
+  },
+  {
+   "form": "ensure",
+   "score": 0.833,
+   "src": "dense",
+   "script": "lat",
+   "pivot": 0.0
+  }
+ ],
+ "wattage": [
+  {
+   "form": "watt",
+   "score": 1.833,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.537
+  },
+  {
+   "form": "ওয়াট",
+   "score": 1.556,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.851
+  },
+  {
+   "form": "ওয়াটের",
+   "score": 1.497,
+   "src": "pivot+dense",
+   "script": "bn",
+   "pivot": 0.824
+  },
+  {
+   "form": "watt fast",
+   "score": 0.976,
+   "src": "pivot+dense",
+   "script": "lat",
+   "pivot": 0.8
+  }
+ ],
+ "wide angle": []
+}
