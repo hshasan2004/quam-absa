@@ -59,6 +59,11 @@ def parse():
                     help="RAMP-R evidence-gated read-out: each retrieved form gets its own span vector; a gate "
                          "from (form-review match, retrieval score, form-name agreement) decides how much of it "
                          "is added to the aspect vector, so noisy retrievals can be ignored")
+    ap.add_argument("--det-noisy-or", action="store_true",
+                    help="detection = noisy-OR with leak: P = 1 - (1 - p0) * prod_k (1 - e_k); p0 = the base detector, "
+                         "e_k = evidence that retrieved form k occurs in the review (no match -> P = p0)")
+    ap.add_argument("--alias-drop", type=float, nargs=2, default=(0.0, 0.0), metavar=("ALL", "EACH"),
+                    help="training: drop all forms of an aspect / each form with these probabilities")
     ap.add_argument("--aspect-read", choices=["span", "marker"], default="span",
                     help="span: mean over the aspect-name tokens; marker: the separator token before the name (TMM-style)")
     ap.add_argument("--epochs", type=int, default=10)
@@ -112,6 +117,24 @@ class TextDataset(ABSADataset):
         self.tok, self.max_len, self.prompt, self.marker = tok, max_len, prompt, marker
         self.kb, self.kb_score, self.form_gate = kb or {}, kb_score or {}, form_gate
         self._piece = {}
+        self._fkey = {}
+
+    def phi(self, form, grams):
+        """String evidence: cross-script phonetic match of a retrieved form anywhere in the review (0..1)."""
+        from build_rag_kb import pkey
+        from rapidfuzz.distance import Levenshtein
+        if form not in self._fkey:
+            self._fkey[form] = (form.lower(), pkey(form), len(form.split()))
+        f, k, n = self._fkey[form]
+        best = 0.0
+        for g, gk in grams.get(n, ()):
+            if g == f:
+                return 1.0
+            if len(k) >= 3 and len(gk) >= 3:
+                best = max(best, Levenshtein.normalized_similarity(k, gk))
+            elif len(k) >= 2 and k == gk:                  # short keys: exact phonetic match only
+                best = max(best, 0.9)
+        return best
 
     def entry_pieces(self, name):
         """Token ids of 'name ( f1 ; f2 ; ... )' built piece by piece, with the span of each form."""
@@ -149,7 +172,12 @@ class TextDataset(ABSADataset):
             if r["dataset"] == "babsa":       # gold aspects come first, sampled absent ones last: hide that order
                 random.Random(hash((self.seed, self.epoch if self.train else -1, idx, 7919))).shuffle(order)
             spans = [None] * len(names)
-            fspans, fprior = [[] for _ in names], [[] for _ in names]
+            fspans, fprior, fphi = [[] for _ in names], [[] for _ in names], [[] for _ in names]
+            if self.form_gate:
+                from build_rag_kb import TOK, pkey
+                w = [x.lower() for x in TOK.findall(r["text"])]
+                grams = {1: [(x, pkey(x)) for x in set(w)],
+                         2: [(g, pkey(g)) for g in {f"{a} {b}" for a, b in zip(w, w[1:])}]}
             for k, j in enumerate(order):
                 if k:
                     ids += self.piece("|")
@@ -157,11 +185,12 @@ class TextDataset(ABSADataset):
                     p, fs = self.entry_pieces(names[j])
                     fspans[j] = [(len(ids) + s, len(ids) + e) for s, e in fs]
                     fprior[j] = self.kb_score.get(names[j], [0.0] * len(fs))[: len(fs)]
+                    fphi[j] = [self.phi(f, grams) for f in self.kb.get(names[j], [])[: len(fs)]]
                 else:
                     p = self.piece(self.entry(names[j]))
                 spans[j] = (len(ids) - 1, len(ids)) if self.marker else (len(ids), len(ids) + len(p))
                 ids += p
-            item["form_spans"], item["form_prior"] = fspans, fprior
+            item["form_spans"], item["form_prior"], item["form_phi"] = fspans, fprior, fphi
         sep2 = [t.sep_token_id, t.sep_token_id] if "roberta" in type(t).__name__.lower() else [t.sep_token_id]
         room = 512 - len(ids) - len(sep2) - 1          # encoder limit (long KB prompts)
         item["rev_start"] = len(ids) + len(sep2)
@@ -188,6 +217,7 @@ def make_collate(pad_id, prompt):
             if "form_spans" in batch[0] and any(fs for b in batch for fs in b["form_spans"]):
                 K = max(len(fs) for b in batch for fs in b["form_spans"])
                 FW, fm, fp = torch.zeros(B, A, K, L), torch.zeros(B, A, K), torch.zeros(B, A, K)
+                fphi = torch.zeros(B, A, K)
                 rev = torch.zeros(B, L)
                 for i, b in enumerate(batch):
                     rev[i, b["rev_start"]:len(b["tok_ids"]) - 1] = 1
@@ -195,7 +225,9 @@ def make_collate(pad_id, prompt):
                         for k, (s, e) in enumerate(fs):
                             FW[i, j, k, s:e] = 1.0 / max(e - s, 1); fm[i, j, k] = 1
                             fp[i, j, k] = b["form_prior"][j][k] if k < len(b["form_prior"][j]) else 0.0
+                            fphi[i, j, k] = b["form_phi"][j][k] if k < len(b["form_phi"][j]) else 0.0
                 out["form_w"], out["form_mask"], out["form_prior"], out["rev_mask"] = FW, fm, fp, rev
+                out["form_phi"] = fphi
         return out
     return col
 
@@ -225,6 +257,13 @@ class QuAMFT(nn.Module):
             with torch.no_grad():
                 self.gate.weight.copy_(torch.tensor([[4.0, 0.5, 1.0]])); self.gate.bias.fill_(-2.0)
             self.form_ln = nn.LayerNorm(h)
+        self.noisy_or = getattr(args, "det_noisy_or", False)
+        self.alias_drop = tuple(getattr(args, "alias_drop", (0.0, 0.0)))
+        if self.noisy_or:
+            # e_k = sigmoid(w . [centred evidence, phi, prior] + b): starts near 0 unless the form occurs (phi ~ 1)
+            self.det_gate = nn.Linear(3, 1)
+            with torch.no_grad():
+                self.det_gate.weight.copy_(torch.tensor([[1.0, 8.0, 0.2]])); self.det_gate.bias.fill_(-7.0)
         self.head = QuAM(h, cache.query(OVERALL_QUERY), stats, d_model=args.d_model, heads=args.heads,
                          layout=args.layout, readout=args.readout, direct=args.direct,
                          aspect_vocab=eco_vocab() if args.data == "eco" else (), id_drop=args.id_drop,
@@ -236,10 +275,24 @@ class QuAMFT(nn.Module):
         if self.prompt:
             ctx = torch.einsum("bal,bld->bad", b["span_w"].to(hs.dtype), hs).float()
             if self.form_gate and "form_w" in b:
+                if self.training and max(self.alias_drop) > 0:
+                    fm = b["form_mask"]
+                    keep = (torch.rand(fm.shape[:2], device=fm.device) >= self.alias_drop[0])[..., None]
+                    keep = keep & (torch.rand(fm.shape, device=fm.device) >= self.alias_drop[1])
+                    b = dict(b, form_mask=fm * keep.to(fm.dtype))
                 ctx = ctx + self.gated_forms(hs, ctx, b)
             # the head z-scores queries with the cache statistics; invert that so it sees LN(ctx)
             b["aq"] = self.q_mean + self.q_sd * self.ctx_ln(ctx)
-        return self.head(b)
+        out = self.head(b)
+        if self.noisy_or and getattr(self, "_feats", None) is not None:
+            feats, fm = self._feats
+            e = torch.sigmoid(self.det_gate(feats).squeeze(-1).float()) * fm          # (B, A, K)
+            # log space: log(1-P) = log(1-p0) + sum_k log(1-e_k);  returned as a logit for the usual BCE
+            l1m = nn.functional.logsigmoid(-out["presence"].float()) + torch.log1p(-e.clamp(max=1 - 1e-4)).sum(-1)
+            l1m = l1m.clamp(max=-1e-6)
+            out["presence"] = torch.log(-torch.expm1(l1m)) - l1m
+            self._feats = None
+        return out
 
     def gated_forms(self, hs, ctx, b):
         """Evidence-gated sum of the retrieved forms' span vectors (B, A, h)."""
@@ -250,8 +303,18 @@ class QuAMFT(nn.Module):
         sim = torch.einsum("bakd,bld->bakl", Fn, Hn).masked_fill(b["rev_mask"][:, None, None] == 0, -1.0)
         evidence = sim.amax(-1)                                       # does this form occur in the review?
         agree = (Fn * nn.functional.normalize(self.form_ln(ctx), dim=-1)[:, :, None]).sum(-1)
-        g = torch.sigmoid(self.gate(torch.stack([evidence, b["form_prior"], agree], -1)).squeeze(-1)) * fm
+        feats = torch.stack([evidence, b["form_prior"], agree], -1)
+        g = torch.sigmoid(self.gate(feats).squeeze(-1)) * fm
         self.last_gate = g.detach()
+        if self.noisy_or:
+            # centred evidence: subtract the review's mean state (XLM-R states share one dominant direction,
+            # so raw cosines are ~0.98 for every token) + string evidence phi
+            rm = b["rev_mask"].to(hs.dtype)[..., None]
+            mu = (hs * rm).sum(1, keepdim=True) / rm.sum(1, keepdim=True).clamp(min=1)
+            Hc = nn.functional.normalize((hs - mu).float(), dim=-1)
+            Fc = nn.functional.normalize(F_ - mu[:, None].float(), dim=-1)
+            ev_c = torch.einsum("bakd,bld->bakl", Fc, Hc).masked_fill(b["rev_mask"][:, None, None] == 0, -1.0).amax(-1)
+            self._feats = (torch.stack([ev_c, b["form_phi"], b["form_prior"]], -1), fm)
         return (g[..., None] * F_).sum(2) / (1.0 + g.sum(2, keepdim=True))
 
 
