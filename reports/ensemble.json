@@ -1,0 +1,74 @@
+{
+ "official|no retrieval": {
+  "seed_mean": {
+   "pair_F1": 74.386067176474,
+   "det_macroF1": 63.22572788488114
+  },
+  "ensemble": {
+   "pair_F1": 75.57786289789988,
+   "det_macroF1": 66.1369368523682
+  }
+ },
+ "official|rag3": {
+  "seed_mean": {
+   "pair_F1": 72.89028978611258,
+   "det_macroF1": 59.31853120524459
+  },
+  "ensemble": {
+   "pair_F1": 74.20100639194887,
+   "det_macroF1": 60.12674354178812
+  }
+ },
+ "official|hand list": {
+  "seed_mean": {
+   "pair_F1": 73.56996212509131,
+   "det_macroF1": 61.83078138257205
+  },
+  "ensemble": {
+   "pair_F1": 74.54350161117078,
+   "det_macroF1": 63.35027418971643
+  }
+ },
+ "zeroshot|no retrieval": {
+  "seed_mean": {
+   "pair_F1": 59.898865008645544,
+   "det_macroF1": 56.57360944829343,
+   "unseen_pair_F1": 36.423760549104124,
+   "unseen_det_F1": 42.34277376144786
+  },
+  "ensemble": {
+   "pair_F1": 61.42754145638068,
+   "det_macroF1": 58.64826915413622,
+   "unseen_pair_F1": 37.253798536859875,
+   "unseen_det_F1": 43.669105233539675
+  }
+ },
+ "zeroshot|rag3": {
+  "seed_mean": {
+   "pair_F1": 62.37516331503122,
+   "det_macroF1": 57.623500373542505,
+   "unseen_pair_F1": 42.31813300470316,
+   "unseen_det_F1": 50.24369582685656
+  },
+  "ensemble": {
+   "pair_F1": 63.830557566980445,
+   "det_macroF1": 59.656422325027776,
+   "unseen_pair_F1": 44.23398328690808,
+   "unseen_det_F1": 51.81058495821727
+  }
+ },
+ "zeroshot|hand list": {
+  "seed_mean": {
+   "pair_F1": 63.391948257756525,
+   "det_macroF1": 60.825601568890455,
+   "unseen_pair_F1": 45.10452508417641,
+   "unseen_det_F1": 52.86736441496382
+  },
+  "ensemble": {
+   "pair_F1": 64.92349409258183,
+   "det_macroF1": 62.66558757666352,
+   "unseen_pair_F1": 46.895720313441835,
+   "unseen_det_F1": 54.611211573236886
+  }
+ }
+}

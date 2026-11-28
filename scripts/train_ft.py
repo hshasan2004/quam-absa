@@ -92,6 +92,14 @@ def parse():
     ap.add_argument("--max-tokens", type=int, default=2048, help="micro-batch token budget (rows x length)")
     ap.add_argument("--limit", type=int, default=0, help="debug: first N reviews per part")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--eval-only", default="", help="no training: load runs/<RUN>/best.pt, tune the threshold on val, score test")
+    ap.add_argument("--kb-max-freq", type=int, default=0,
+                    help="frequency-gated retrieval: drop retrieved forms of aspects with >= N training mentions (0 = off)")
+    ap.add_argument("--kb-freq-mode", choices=["remove", "mask"], default="remove",
+                    help="remove: frequent aspects lose their forms from the prompt; mask: forms stay in the prompt but"
+                         " their gate / noisy-OR evidence is switched off (what alias dropout does in training)")
+    ap.add_argument("--tta", type=int, default=1,
+                    help="test-time alias-dropout ensemble: average presence over N passes (1 = off)")
     return ap.parse_args()
 
 
@@ -186,6 +194,8 @@ class TextDataset(ABSADataset):
                     fspans[j] = [(len(ids) + s, len(ids) + e) for s, e in fs]
                     fprior[j] = self.kb_score.get(names[j], [0.0] * len(fs))[: len(fs)]
                     fphi[j] = [self.phi(f, grams) for f in self.kb.get(names[j], [])[: len(fs)]]
+                    if names[j] in getattr(self, "kb_off", ()):     # forms stay in the text, evidence is off
+                        fspans[j], fprior[j], fphi[j] = [], [], []
                 else:
                     p = self.piece(self.entry(names[j]))
                 spans[j] = (len(ids) - 1, len(ids)) if self.marker else (len(ids), len(ids) + len(p))
@@ -275,7 +285,7 @@ class QuAMFT(nn.Module):
         if self.prompt:
             ctx = torch.einsum("bal,bld->bad", b["span_w"].to(hs.dtype), hs).float()
             if self.form_gate and "form_w" in b:
-                if self.training and max(self.alias_drop) > 0:
+                if (self.training or getattr(self, "tta_drop", False)) and max(self.alias_drop) > 0:
                     fm = b["form_mask"]
                     keep = (torch.rand(fm.shape[:2], device=fm.device) >= self.alias_drop[0])[..., None]
                     keep = keep & (torch.rand(fm.shape, device=fm.device) >= self.alias_drop[1])
@@ -349,6 +359,21 @@ def evaluate(model, loader, dev):
     return col.arrays()
 
 
+def evaluate_tta(model, loader, dev, n):
+    """n = 1: plain evaluation. n > 1: average presence probability over the clean pass and n - 1 passes with
+    training-time alias dropout (random retrieved forms hidden); polarity comes from the clean pass."""
+    a, rv = evaluate(model, loader, dev)
+    if n > 1:
+        probs = [a["prob"]]
+        model.tta_drop = True
+        for i in range(n - 1):
+            torch.manual_seed(1000 + i)
+            probs.append(evaluate(model, loader, dev)[0]["prob"])
+        model.tta_drop = False
+        a = dict(a, prob=np.mean(probs, 0))
+    return a, rv
+
+
 def main():
     args = parse()
     random.seed(args.seed); np.random.seed(args.seed); torch.manual_seed(args.seed)
@@ -368,7 +393,7 @@ def main():
     for r in recs:
         r["splits"]["_run"] = r["splits"][args.eco_split] if r["dataset"] == "eco" else r["splits"]["grouped"]
     tok = AutoTokenizer.from_pretrained(args.model)
-    kb = kb_score = None
+    kb = kb_score = None; kb_off = set()
     if args.aspect_kb:
         fields = args.kb_scripts.split(",")
         raw = json.loads(Path(args.aspect_kb).read_text(encoding="utf-8"))
@@ -386,11 +411,23 @@ def main():
             while any(a == b for a, b in zip(keys, perm)):      # derangement: no aspect keeps its own forms
                 rng.shuffle(perm)
             kb = {k: kb[p] for k, p in zip(keys, perm)}
+        if args.kb_max_freq > 0:                                   # retrieval only for rare / unseen aspects
+            from collections import Counter
+            freq = Counter(a["query"] for r in recs if r["dataset"] == "eco" and r["splits"]["_run"] == "train"
+                           for a in r["aspects"] if a["label"] != "none")
+            drop = [k for k in kb if freq[k] >= args.kb_max_freq]
+            if args.kb_freq_mode == "remove":
+                for k in drop:
+                    kb.pop(k); kb_score.pop(k, None)
+            kb_off = set(drop) if args.kb_freq_mode == "mask" else set()
+            log(f"frequency gate: forms kept for {len(kb)} aspects (< {args.kb_max_freq} training mentions), dropped {len(drop)}")
         log(f"aspect KB: {len(kb)} entries, fields {fields}, shuffled={args.kb_shuffle}")
     kw = dict(kb=kb, kb_score=kb_score if kb else None, form_gate=args.form_gate, babsa_pool=pool, babsa_neg=args.babsa_neg, seed=args.seed, tok=tok, max_len=args.max_len,
               prompt=args.prompt_aspects, marker=args.aspect_read == "marker", limit=args.limit or None)
     proxy = NoTokens(cache)
     ds = {p: TextDataset(recs, proxy, "_run", p, train=(p == "train"), **kw) for p in ("train", "val", "test")}
+    for d in ds.values():
+        d.kb_off = kb_off
     log(f"{args.model} prompt={args.prompt_aspects} | train={len(ds['train'])} val={len(ds['val'])} test={len(ds['test'])}")
 
     col = make_collate(tok.pad_token_id, args.prompt_aspects)
@@ -416,7 +453,13 @@ def main():
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda s: min((s + 1) / warm, max(0.0, (total - s) / (total - warm))))
 
     best, best_state, best_epoch, bad, best_val = -1.0, None, -1, 0, None
-    for epoch in range(1, args.epochs + 1):
+    if args.eval_only:
+        best_state = torch.load(ROOT / "runs" / args.eval_only / "best.pt", map_location="cpu")
+        model.load_state_dict(best_state)
+        a, rv = evaluate_tta(model, val_dl, dev, args.tta)
+        best_val = score(a, rv, args.data)
+        log(f"eval-only {args.eval_only}: val pairF1={best_val['eco']['pair_F1']:.4f} t={best_val['eco']['threshold']:.2f}")
+    for epoch in range(1, (0 if args.eval_only else args.epochs) + 1):
         ds["train"].epoch = train_dl.batch_sampler.epoch = epoch
         t0, agg, n, skipped = time.time(), {}, 0, 0
         torch.cuda.reset_peak_memory_stats()
@@ -461,11 +504,12 @@ def main():
             if bad >= args.patience:
                 log(f"early stop (no improvement for {args.patience} epochs)"); break
 
-    torch.save(best_state, run / "best.pt")             # so a crash in the test pass does not lose training
+    if not args.eval_only:
+        torch.save(best_state, run / "best.pt")         # so a crash in the test pass does not lose training
     model.load_state_dict(best_state)
     for attempt in range(3):                             # 4 GB GPU: transient CUDA errors happen; retry smaller
         try:
-            a, rv = evaluate(model, test_dl if attempt == 0 else mk(ds["test"], 8, False, 0), dev)
+            a, rv = evaluate_tta(model, test_dl if attempt == 0 else mk(ds["test"], 8, False, 0), dev, args.tta)
             break
         except RuntimeError as err:
             log(f"test pass failed ({err}); retry {attempt + 1}")
