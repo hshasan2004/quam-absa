@@ -18,11 +18,15 @@ RUNS = {
  "zeroshot": {"ramp": ["kb_zeroshot", "kb_zeroshot_s1", "kb_zeroshot_s2"],
               "en": ["kben_zeroshot", "kben_zeroshot_s1", "kben_zeroshot_s2"],
               "shuf": ["kbshuf_zeroshot", "kbshuf_zeroshot_s1", "kbshuf_zeroshot_s2"],
-              "none": ["ftp_nomem_e15_zeroshot", "ftp_nomem_e15_zeroshot_s1", "ftp_nomem_e15_zeroshot_s2"]},
+              "none": ["ftp_nomem_e15_zeroshot", "ftp_nomem_e15_zeroshot_s1", "ftp_nomem_e15_zeroshot_s2"],
+              "rag3": ["rag3_zeroshot", "rag3_zeroshot_s1", "rag3_zeroshot_s2"],
+              "rag2": ["rag2_zeroshot", "rag2_zeroshot_s1", "rag2_zeroshot_s2"]},
  "official": {"ramp": ["kb_official_c", "kb_official_s1", "kb_official_s2"],
-              "none": ["ftp_nomem_e15_official", "ftp_nomem_e15_official_s1", "ftp_nomem_e15_official_s2"]}}
-COMPS = {"zeroshot": [("ramp", "none"), ("ramp", "shuf"), ("ramp", "en"), ("en", "none"), ("shuf", "none")],
-         "official": [("ramp", "none")]}
+              "none": ["ftp_nomem_e15_official", "ftp_nomem_e15_official_s1", "ftp_nomem_e15_official_s2"],
+              "rag3": ["rag3_official", "rag3_official_s1", "rag3_official_s2"]}}
+COMPS = {"zeroshot": [("ramp", "none"), ("ramp", "shuf"), ("ramp", "en"), ("en", "none"), ("shuf", "none"),
+                      ("rag3", "none"), ("rag3", "shuf"), ("rag3", "rag2"), ("rag3", "ramp"), ("rag2", "none")],
+         "official": [("ramp", "none"), ("rag3", "none"), ("rag3", "ramp")]}
 
 
 def counts(n, ids, names):
